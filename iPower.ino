@@ -5,6 +5,26 @@
 #include "dht11.h"
 #include "printf.h"
 
+// Declare DHT11 sensor digital pin
+#define DHT11PIN  3
+
+// Declare LEDs digital pin
+#define RED  6
+#define GREEN  5
+
+// Declare relays digital pin 
+#define RELAY_1  8
+#define RELAY_2  7
+// Declare relays status
+#define RELAY_ON  0
+#define RELAY_OFF  1
+
+#define ACS712-20A
+
+
+
+
+
 // Set up nRF24L01 radio on SPI bus pin CE and CS
 RF24 radio(9,10);
 // The radio pipe address.
@@ -13,24 +33,14 @@ const uint64_t pipe = 0xE8E8F0F0E1LL;
 uint8_t message[2];
 uint8_t message_size = sizeof(message);
 
-// Declare DHT11 sensor
-dht11 DHT11;
-// Set up sensor digital pin
-#define DHT11PIN 3
 
-// Define relays status
-#define RELAY_ON 0
-#define RELAY_OFF 1
-// Set up relays digital pin 
-#define Relay1  8
-#define Relay2  7
+
+
+
 
 // Declare ACS712-20A sensor analog pin
 const int sensorPin = A0;
 
-// Declare LEDs pins
-const int ledRed = 6;
-const int ledGreen = 5;
 
 //
 // Setup
@@ -74,6 +84,8 @@ void setup(void)
 //
 void loop(void)
 {
+  
+  
   // green led
   digitalWrite(ledRed, LOW);
   digitalWrite(ledGreen, HIGH);
@@ -142,6 +154,54 @@ void loop(void)
   delay(3000);
   
 }
+
+/****************************************************************************/
+
+readDHTSensor() {
+  int state = dht11.read(DHT11PIN);
+  switch (state) {
+    case DHTLIB_OK:
+      dht11.humidity;
+      dht11.tempearature;
+      return;
+    case DHTLIB_ERROR_CHECKSUM:  
+      
+      return;
+    case DHTLIB_ERROR_TIMEOUT: 
+      
+      return;
+    default: 
+      
+      return;
+  }
+}
+
+/****************************************************************************/
+
+void led(int pin) {
+  switch (pin) {
+    case RED:
+      digitalWrite(RED, HIGH);
+      digitalWrite(GREEN, LOW);
+      return;
+    case GREEN:
+      digitalWrite(GREEN, HIGH);
+      digitalWrite(RED, LOW);
+      return;
+    default: 
+      digitalWrite(GREEN, LOW);
+      digitalWrite(RED, LOW);
+      return;
+  }
+}
+
+/****************************************************************************/
+
+
+
+
+
+
 
 float readCurrentSensorVC(int sensorPin, float zeroValue) {
   // turn on pullup resistors

@@ -1,6 +1,6 @@
 // 
 //    FILE: dht11.h
-// VERSION: 0.3.2
+// VERSION: 0.4.1
 // PURPOSE: DHT11 Temperature & Humidity Sensor library for Arduino
 // LICENSE: GPL v3 (http://www.gnu.org/licenses/gpl.html)
 //
@@ -11,18 +11,22 @@
 // HISTORY:
 // George Hadjikyriacou - Original version
 // see dht.cpp file
-// *** Terry King: Changed include Arduino.h for 1.0x  
-// include core Wiring API and now Arduino
-#if defined(ARDUINO) && ARDUINO >= 100
-  #include "Arduino.h"
-  #else
-  #include "WProgram.h"
-  #endif
+// 
 
 #ifndef dht11_h
 #define dht11_h
 
-#define DHT11LIB_VERSION "0.3.2"
+#if defined(ARDUINO) && (ARDUINO >= 100)
+#include <Arduino.h>
+#else
+#include <WProgram.h>
+#endif
+
+#define DHT11LIB_VERSION "0.4.1"
+
+#define DHTLIB_OK				0
+#define DHTLIB_ERROR_CHECKSUM	-1
+#define DHTLIB_ERROR_TIMEOUT	-2
 
 class dht11
 {

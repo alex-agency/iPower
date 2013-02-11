@@ -1,6 +1,6 @@
 //
 //    FILE: dht11.cpp
-// VERSION: 0.3.2
+// VERSION: 0.4.1
 // PURPOSE: DHT11 Temperature & Humidity Sensor library for Arduino
 // LICENSE: GPL v3 (http://www.gnu.org/licenses/gpl.html)
 //
@@ -13,14 +13,18 @@
 // + added comments
 // + removed all non DHT11 specific code
 // + added references
+// Mod by Rob Tillaart - Version 0.4 (17/03/2012)
+// + added 1.0 support
+// Mod by Rob Tillaart - Version 0.4.1 (19/05/2012)
+// + added error codes
 //
 
 #include "dht11.h"
 
-// returnvalues:
-//  0 : OK
-// -1 : checksum error
-// -2 : timeout
+// Return values:
+// DHTLIB_OK
+// DHTLIB_ERROR_CHECKSUM
+// DHTLIB_ERROR_TIMEOUT
 int dht11::read(int pin)
 {
 	// BUFFER TO RECEIVE
@@ -42,24 +46,24 @@ int dht11::read(int pin)
 	// ACKNOWLEDGE or TIMEOUT
 	unsigned int loopCnt = 10000;
 	while(digitalRead(pin) == LOW)
-		if (loopCnt-- == 0) return -2;
+		if (loopCnt-- == 0) return DHTLIB_ERROR_TIMEOUT;
 
 	loopCnt = 10000;
 	while(digitalRead(pin) == HIGH)
-		if (loopCnt-- == 0) return -2;
+		if (loopCnt-- == 0) return DHTLIB_ERROR_TIMEOUT;
 
 	// READ OUTPUT - 40 BITS => 5 BYTES or TIMEOUT
 	for (int i=0; i<40; i++)
 	{
 		loopCnt = 10000;
 		while(digitalRead(pin) == LOW)
-			if (loopCnt-- == 0) return -2;
+			if (loopCnt-- == 0) return DHTLIB_ERROR_TIMEOUT;
 
 		unsigned long t = micros();
 
 		loopCnt = 10000;
 		while(digitalRead(pin) == HIGH)
-			if (loopCnt-- == 0) return -2;
+			if (loopCnt-- == 0) return DHTLIB_ERROR_TIMEOUT;
 
 		if ((micros() - t) > 40) bits[idx] |= (1 << cnt);
 		if (cnt == 0)   // next byte?
@@ -77,8 +81,8 @@ int dht11::read(int pin)
 
 	uint8_t sum = bits[0] + bits[2];  
 
-	if (bits[4] != sum) return -1;
-	return 0;
+	if (bits[4] != sum) return DHTLIB_ERROR_CHECKSUM;
+	return DHTLIB_OK;
 }
 //
 // END OF FILE
