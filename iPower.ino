@@ -19,27 +19,41 @@
 #define RELAY_ON  0
 #define RELAY_OFF  1
 
-#define ACS712-20A
-
-
-
-
+// Declare ACS712 sensor analog pin
+#define ACS712PIN  A0
 
 // Set up nRF24L01 radio on SPI bus pin CE and CS
 RF24 radio(9,10);
-// The radio pipe address.
-const uint64_t pipe = 0xE8E8F0F0E1LL;
+// Radio pipe addresses for the 2 nodes to communicate.
+const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
+
+// Declare radio greetings
+const uint8_t grettings[] = { 0, 0 }
+
+
+
 // Declare radio message
-uint8_t message[2];
-uint8_t message_size = sizeof(message);
+const int message[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+const uint8_t message_size = sizeof(message);
+const char* message_friendly_name[] = { "module_id", "module_state", 
+                                       "humidity", "temperature", 
+                                       "relay1", "relay2", "power", 
+                                       "DHT11_state", "ACS712_state" };
+// Declare radio payload
+const uint8_t payload[] = { };
+const uint8_t payload_size = sizeof(payload);
+const char* payload_friendly_name[] = { "", "",   }
 
 
 
 
 
+// module sleeping and wait greetings, checking every 15 sec. 
+// base sent hello every 5 sec and wait greetings with id.
+// module got hello, send hello with id and wait for connect.
+// base got hello with id, send connect and wait for message.
+// module got connect, send message and wait for payload.
 
-// Declare ACS712-20A sensor analog pin
-const int sensorPin = A0;
 
 
 //
