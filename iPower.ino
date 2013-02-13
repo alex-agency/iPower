@@ -3,7 +3,6 @@
 #include "nRF24L01.h"
 #include "RF24.h"
 #include "RF24Network.h"
-#include "nodeconfig.h"
 #include "sleep.h"
 #include "dht11.h"
 #include "printf.h"
@@ -32,25 +31,32 @@ RF24Network network(radio);
 // Declare channel 1-128
 const uint16_t channel = 100;
 // current node address
-eeprom_info_t this_node;
+const uint8_t this_node = 001;
 
-// The watchdog timer sleep constants (4 sec*1 cycle)
+// The watchdog timer (4 sec*1 cycle)
 const wdt_prescalar_e wdt_prescalar = wdt_4s;
 const int sleep_cycles_per_transmission = 1;
 
+// Delay manager
+const unsigned long interval = 2000; // ms
+unsigned long last_time_sent;
+
+// radio message
+struct Message
+{
+  int humidity;
+  int temperature;
+  bool relay_1;
+  bool relay_2;
+  float power; 
+  char* DHT11_state;
+  char* ACS712_state;
+};
+
+
+
 // Initialize timer for regulate sending interval
-Timer send_timer(2000); // ms
-
-
-
-
-
-
-
-// Delay manager to send message regularly
-//const unsigned long interval = 2000; // ms
-//unsigned long last_time_sent;
-
+//Timer send_timer(2000); // ms
 
 
 
@@ -89,26 +95,17 @@ void setup(void)
   Serial.begin(57600);
   printf_begin();
   
-  // read node from EEPROM
-  this_node = nodeconfig_read();
-  
-  if ( this_node.relay == false ) {
-    Sleep.begin(wdt_prescalar,sleep_cycles_per_transmission);
-  }
-  
-  // initialize timer
-  send_timer.begin();
-  
+  // initialize sleep system
+  Sleep.begin(wdt_prescalar,sleep_cycles_per_transmission);
+    
   // initialize radio
   radio.begin();
   // initialize network
-  network.begin(channel, this_node.address);
+  network.begin(channel, this_node);
   
-  
-  
-  
-  
-  
+
+
+
 //  // initialize relays, turned off
 //  digitalWrite(Relay1, RELAY_OFF);
 //  digitalWrite(Relay2, RELAY_OFF);
@@ -152,25 +149,52 @@ void loop(void)
     network.peek(header);
     
     // Dispatch the message to the correct handler.
-    switch (header.type)
-    {
-    case 'T':
-      handle_T(header);
-      break;
-    case 'N':
-      handle_N(header);
-      break;
-    default:
-      printf_P(PSTR("*** WARNING *** Unknown message type %c\n\r"),header.type);
-      network.read(header,0,0);
-      break;
-    };
+//    switch (header.type)
+//    {
+//    case 'T':
+//      handle_T(header);
+//      break;
+//    case 'N':
+//      handle_N(header);
+//      break;
+//    default:
+//      printf_P(PSTR("*** WARNING *** Unknown message type %c\n\r"),header.type);
+//      network.read(header,0,0);
+//      break;
+//    };
   }
   
+  // Send a ping to the next node every 'interval' ms
+  unsigned long now = millis();
+  if ( now - last_time_sent >= interval )
+  {
+    last_time_sent = now;
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    // go to sleep
+    if ( Sleep ) 
+    {
+      // Power down the radio.  Note that the radio will get powered back up
+      // on the next write() call.
+      radio.powerDown();
+      
+      // Be sure to flush the serial first before sleeping, so everything
+      // gets printed properly
+      Serial.flush();
+      
+      // Sleep the MCU.  The watchdog timer will awaken in a short while, and
+      // continue execution here.
+      Sleep.go();
+    }
+  }
   
-  
-  // Listen for a new node address
-  nodeconfig_listen();
   
   
   
