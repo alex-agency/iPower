@@ -4,6 +4,7 @@
 #include "RF24.h"
 #include "RF24Network.h"
 #include "nodeconfig.h"
+#include "sleep.h"
 #include "dht11.h"
 #include "printf.h"
 
@@ -32,9 +33,23 @@ RF24Network network(radio);
 const uint16_t channel = 100;
 // current node address
 eeprom_info_t this_node;
+
+// The watchdog timer sleep constants (4 sec*1 cycle)
+const wdt_prescalar_e wdt_prescalar = wdt_4s;
+const int sleep_cycles_per_transmission = 1;
+
+// Initialize timer for regulate sending interval
+Timer send_timer(2000); // ms
+
+
+
+
+
+
+
 // Delay manager to send message regularly
-const unsigned long interval = 2000; // ms
-unsigned long last_time_sent;
+//const unsigned long interval = 2000; // ms
+//unsigned long last_time_sent;
 
 
 
@@ -80,6 +95,9 @@ void setup(void)
   if ( this_node.relay == false ) {
     Sleep.begin(wdt_prescalar,sleep_cycles_per_transmission);
   }
+  
+  // initialize timer
+  send_timer.begin();
   
   // initialize radio
   radio.begin();
@@ -149,15 +167,10 @@ void loop(void)
     };
   }
   
-  // If it's time to send a message, send it!
-  unsigned long now = millis();
-  if ( now - last_sent >= interval  )
-  {
-    last_time_sent = now;
-    
-    
-    
-  }
+  
+  
+  // Listen for a new node address
+  nodeconfig_listen();
   
   
   
