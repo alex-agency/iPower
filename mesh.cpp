@@ -1,31 +1,176 @@
 
-/*
-
-
-  Node is homeless (has address 99)
-    1. Send ping to someone (00 .. 99)
-    2. If ping sent save this address to active nodes
-  
-  Homeless node got active nodes from someone
-    1. Check if we already know this address
-    2. Set it as relay or base (00)
-    3. 
-    4. Reinitialize radio with new address
-    5. Send payload message to base or relay
-    
-    
-   2. Set own adrress as next address after sender, if it not exists in the list 
-   3. Initialize new address
-   4. Send payload message
-
-   Node got ping from Homless
-   1. Reply with nodes list
-
-   Node got payload
-   1. Add new node to list, if not exists
-
-*/
-
 #include "mesh.h"
 
+RF24Network mesh::network;
+// Delay manager
+const unsigned long interval = 2000; // ms
+unsigned long last_time_sent;
+// last address in the network, homeless address
+uint8_t homeless = 05555;
+uint8_t base = 00000;
+// current node address
+uint8_t this_node = homeless;
 
+/****************************************************************************/
+
+mesh::mesh( RF24& _radio )
+{
+  network(_radio);
+}
+
+/****************************************************************************/
+
+void mesh::begin(uint8_t _channel, uint16_t _id)
+{
+  // initialize network
+  network.begin(_channel, this_node);
+}
+
+/****************************************************************************/
+
+bool mesh::send(const void* message, uint16_t to_id)
+{
+  uint16_t to = map.get(to_id);
+  RF24NetworkHeader header(to, 'M');
+
+  bool ok = network.write(header,&message,sizeof(message));
+  if(ok) {
+    return true;
+  } else {
+    // reinitialize network
+    network.begin(channel, homeless);
+    return false;
+  }
+}
+
+/****************************************************************************/
+
+void mesh::update()
+{
+  // update RF24Network
+  network.update();
+  
+  // Is there anything ready?
+  while ( network.available() ) 
+  {
+    RF24NetworkHeader header;
+    network.peek(header);
+
+    // Dispatch the message to the correct handler.
+    switch (header.type)
+    {
+      case 'A':
+        handle_A(header);
+        break;
+      case 'I':
+        handle_I(header);
+        break;
+      case 'M':
+        break;
+      default:
+        // Unknown message type
+        // skip this message
+        network.read(header,0,0);
+        break;
+    };
+  }
+
+  unsigned long now = millis();
+  if ( now - last_time_sent >= interval )
+  {
+    last_time_sent = now;
+
+    if(this_node == homeless) {
+      send_A(base);
+    }
+  }
+}
+
+/****************************************************************************/
+
+bool mesh::available()
+{
+  return network.available();
+}
+
+/****************************************************************************/
+
+Message mesh::read()
+{
+  RF24NetworkHeader header;
+  network.peek(header);
+
+  if(header.type == 'M') {
+    network.read(header,&message,sizeof(unsigned long));
+  }
+  return message;
+}
+
+/****************************************************************************/
+
+void mesh::handle_A(RF24NetworkHeader& header)
+{
+  uint16_t message;
+  network.read(header,&message,sizeof(message));
+
+  uint16_t address;
+  if(message == header.from_node) {
+    address = get_address(base);
+  } else {
+    address = get_address(message);
+  }
+
+  set_address(address);
+}
+
+/****************************************************************************/
+
+bool mesh::send_A(uint16_t to)
+{
+  RF24NetworkHeader header(to, 'A');
+  return network.write(header,to,sizeof(to));
+}
+
+/****************************************************************************/
+
+void mesh::handle_I(RF24NetworkHeader header)
+{
+  uint16_t id;
+  network.read(header,&id,sizeof(id));
+
+  map.update(id, header.from_node);
+}
+
+/****************************************************************************/
+
+bool mesh::send_I()
+{
+  RF24NetworkHeader header(base, 'I');
+  return network.write(header,id,sizeof(id));
+}
+
+/****************************************************************************/
+
+uint16_t mesh::get_address(uint16_t relay_address)
+{
+  if(this_node != base) {
+    
+  }
+}
+
+/****************************************************************************/
+
+void mesh::set_address(uint16_t address)
+{
+  // reinitialize network
+  network.begin(channel, address);
+  // send unique ID to base 
+  bool ok = send_I();
+
+  if(ok == false) {
+    // reinitialize network
+    network.begin(channel, homeless);
+  }
+}
+
+/****************************************************************************/
