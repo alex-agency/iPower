@@ -1,60 +1,38 @@
 
-#include "mesh.h"
-#include "stl_map.h"
+#include "Mesh.h"
+#include "HashMap.h"
 
-
-
-  // last address in the network, homeless address
-  uint8_t homeless = 05555;
-  uint8_t base = 00000;
-  // current node address
-  uint8_t this_node = homeless;
-  
-/*
- * Test std::map
+/**
+ * Nodes 
+ * 
+ * HashMap that pairs id to address and can hold 10 pairs
  */
- 
-struct TestMap {
- 
-  static void RunTest() {
-
- 
-    std::map<int,const char *> days;
-    int i;
- 
-    days[1]="Monday";
-    days[2]="Tuesday";
-    days[3]="Wednesday";
-    days[4]="Thursday";
-    days[5]="Friday";
-    days[6]="Saturday";
-    days[7]="Sunday";
- 
-    for(i=1;i<7;i++)
-      
-  }
-};
+CreateHashMap(nodes, uint16_t, uint16_t, 10);
 
 /****************************************************************************/
 
-mesh::mesh( RF24Network& _network ): network(_network) 
+Mesh::Mesh( RF24& _radio ): radio(_radio), network(radio)
 {
 }
 
 /****************************************************************************/
 
-void mesh::begin(uint8_t _channel, uint16_t _id)
+void Mesh::begin(uint8_t _channel, uint16_t _node_id)
 {
+  node_id = _node_id;
+  node_address = nodes[node_id];
+  
   // initialize network
-  network.begin(_channel, this_node);
+  network.begin(_channel, node_address);
 }
 
 /****************************************************************************/
 
-bool mesh::send(const void* message, uint16_t to_id)
+bool Mesh::send(const void* message, uint16_t to_id)
 {
-  uint16_t to = map.find(to_id);
-  RF24NetworkHeader header(to, 'M');
+  uint16_t to_address = nodes[to_id];
+
+  RF24NetworkHeader header(to_address, 'M');
 
   bool ok = network.write(header,&message,sizeof(message));
   if(ok) {
@@ -68,7 +46,7 @@ bool mesh::send(const void* message, uint16_t to_id)
 
 /****************************************************************************/
 
-void mesh::update()
+void Mesh::update()
 {
   // update RF24Network
   network.update();
@@ -89,6 +67,7 @@ void mesh::update()
         handle_I(header);
         break;
       case 'M':
+        // do not handle payload
         break;
       default:
         // Unknown message type
@@ -103,7 +82,7 @@ void mesh::update()
   {
     last_time_sent = now;
 
-    if(this_node == homeless) {
+    if(node_address == homeless) {
       send_A(base);
     }
   }
@@ -111,17 +90,19 @@ void mesh::update()
 
 /****************************************************************************/
 
-bool mesh::available()
+bool Mesh::available()
 {
   return network.available();
 }
 
 /****************************************************************************/
 
-Message mesh::read()
+const void* Mesh::read()
 {
   RF24NetworkHeader header;
   network.peek(header);
+
+  const void* message;
 
   if(header.type == 'M') {
     network.read(header,&message,sizeof(unsigned long));
@@ -131,7 +112,7 @@ Message mesh::read()
 
 /****************************************************************************/
 
-void mesh::handle_A(RF24NetworkHeader& header)
+void Mesh::handle_A(RF24NetworkHeader& header)
 {
   uint16_t message;
   network.read(header,&message,sizeof(message));
@@ -148,42 +129,40 @@ void mesh::handle_A(RF24NetworkHeader& header)
 
 /****************************************************************************/
 
-bool mesh::send_A(uint16_t to)
+bool Mesh::send_A(uint16_t to_address)
 {
-  RF24NetworkHeader header(to, 'A');
-  return network.write(header,to,sizeof(to));
+  RF24NetworkHeader header(to_address, 'A');
+  return network.write(header,&to_address,sizeof(to_address));
 }
 
 /****************************************************************************/
 
-void mesh::handle_I(RF24NetworkHeader header)
+void Mesh::handle_I(RF24NetworkHeader& header)
 {
   uint16_t id;
   network.read(header,&id,sizeof(id));
-
-  map.update(id, header.from_node);
+  nodes[id] = header.from_node;
 }
 
 /****************************************************************************/
 
-bool mesh::send_I()
+bool Mesh::send_I()
 {
   RF24NetworkHeader header(base, 'I');
-  return network.write(header,id,sizeof(id));
+  return network.write(header,&node_id,sizeof(node_id));
 }
 
 /****************************************************************************/
 
-uint16_t mesh::get_address(uint16_t relay_address)
+uint16_t Mesh::get_address(uint16_t relay_address)
 {
-  if(this_node != base) {
-    
-  }
+  if(node_id != base)
+    return 0;
 }
 
 /****************************************************************************/
 
-void mesh::set_address(uint16_t address)
+void Mesh::set_address(uint16_t address)
 {
   // reinitialize network
   network.begin(channel, address);

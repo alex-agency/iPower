@@ -3,36 +3,32 @@
 #define __MESH_H__
 
 #include <SPI.h>
-#include "nRF24L01.h"
-#include "RF24.h"
 #include "RF24Network.h"
-#include "sleep.h"
-#include "printf.h"
+
+
 
 /**
- * Message
+ * Mesh Network Layer for RF24 Network
+ *
+ * This class implements an Mesh Network Layer using nRF24L01(+) radios driven
+ * by RF24 and RF24Network libraries.
  */
-struct Message
-{
-  uint16_t temp_reading;
-  uint16_t voltage_reading;
-  static char buffer[];
-  Message(void): temp_reading(0), voltage_reading(0) {}
-  char* toString(void);
-};
-
-class mesh
+class Mesh
 {
 public:
   /**
    * Construct the network
+   *
+   * @param _radio The underlying radio driver instance
    */
-  mesh( RF24Network& _network );
+  Mesh( RF24& _radio );
   
   /**
    * Bring up the network
+   *
+   * @warning Be sure to 'begin' the radio first.
    */
-  void begin(uint8_t _channel, uint16_t _id );
+  void begin(uint8_t _channel, uint16_t _node_id );
   
   /**
   * Send message to node with unique id.
@@ -42,53 +38,48 @@ public:
   /**
   * Update network state.
   */
-  void update();
+  void update(void);
 
   /**
   * Check message box
   */
-  bool available();
+  bool available(void);
 
   /**
   * Read message
   */
-  Message read();
+  const void* read(void);
 
 private:
-  RF24Network& network;
-  // Delay manager
-  const static uint16_t interval = 2000; // ms
+  RF24& radio; /**< Underlying radio driver, provides link/physical layers */
+  RF24Network network; /**< RF24Network layer */ 
+  uint16_t node_address; /**< Logical node address of this unit */
+  uint16_t node_id; /**< Node id of this unit */
+  uint8_t channel; /**< The RF channel to operate on */
+  const static uint16_t base = 00000; /**< Base address */
+  const static uint16_t homeless = 05555; /**< homeless address is last address in the network */
+  const static uint16_t interval = 2000; /**< Delay manager in ms */
   uint16_t last_time_sent;
   
   /**
-  * Handle message with type A
+  * Handle message with type A, handle Address Node request
   */
-  void handle_A(RF24NetworkHeader header);
+  void handle_A(RF24NetworkHeader& header);
 
   /**
-  * Send message with type A
+  * Send message with type A, send Address Node request
   */
-  bool send_A(uint16_t to);
+  bool send_A(uint16_t to_address);
 
   /**
-  * Handle message with type I
+  * Handle message with type I, handle Id Node request
   */
-  void handle_I(RF24NetworkHeader header);
+  void handle_I(RF24NetworkHeader& header);
 
   /**
-  * Send message with type I
+  * Send message with type I, send Id Node request
   */
   bool send_I();
-  
-  /**
-  * Handle message with type M
-  */
-  void handle_M(RF24NetworkHeader header);
-
-  /**
-  * Send message with type M
-  */
-  bool send_M(uint16_t to);
 
   /**
   * Find empty node address
