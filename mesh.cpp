@@ -1,6 +1,6 @@
 
 #include "mesh.h"
-#include <map>
+#include "stl_map.h"
 
 
 
@@ -10,7 +10,30 @@
   // current node address
   uint8_t this_node = homeless;
   
-std::map<int,const char *> days;
+/*
+ * Test std::map
+ */
+ 
+struct TestMap {
+ 
+  static void RunTest() {
+
+ 
+    std::map<int,const char *> days;
+    int i;
+ 
+    days[1]="Monday";
+    days[2]="Tuesday";
+    days[3]="Wednesday";
+    days[4]="Thursday";
+    days[5]="Friday";
+    days[6]="Saturday";
+    days[7]="Sunday";
+ 
+    for(i=1;i<7;i++)
+      
+  }
+};
 
 /****************************************************************************/
 
