@@ -97,17 +97,14 @@ bool Mesh::available()
 
 /****************************************************************************/
 
-const void* Mesh::read()
+void Mesh::read(void* message)
 {
   RF24NetworkHeader header;
   network.peek(header);
-
-  const void* message;
-
+  
   if(header.type == 'M') {
     network.read(header,&message,sizeof(unsigned long));
   }
-  return message;
 }
 
 /****************************************************************************/

@@ -15,15 +15,15 @@ const uint8_t channel = 100;
 const uint16_t node_id = 00102;
 
 /**
- * Message
+ * Payload
  */
-struct Message
+struct Payload
 {
   //uint16_t temp_reading;
   //uint16_t voltage_reading;
   //static char buffer[];
   //Message(void): temp_reading(0), voltage_reading(0) {}
-  //char* toString(void);
+  char* toString(void) {  };
 };
 
 //
@@ -39,7 +39,6 @@ void setup(void)
   radio.begin();
   // initialize network
   mesh.begin(channel, node_id);
-  
 }
 
 //
@@ -52,7 +51,10 @@ void loop(void)
   
   while( mesh.available() ) 
   {
-     Message message = mesh.read();
+    Payload payload;
+    mesh.read(&payload);
+    
+    payload.toString();
   }
 }
 

@@ -5,8 +5,6 @@
 #include <SPI.h>
 #include "RF24Network.h"
 
-
-
 /**
  * Mesh Network Layer for RF24 Network
  *
@@ -48,7 +46,7 @@ public:
   /**
   * Read message
   */
-  const void* read(void);
+  void read(void*);
 
 private:
   RF24& radio; /**< Underlying radio driver, provides link/physical layers */
