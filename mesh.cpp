@@ -1,21 +1,21 @@
 
 #include "mesh.h"
+#include <map>
 
-RF24Network mesh::network;
-// Delay manager
-const unsigned long interval = 2000; // ms
-unsigned long last_time_sent;
-// last address in the network, homeless address
-uint8_t homeless = 05555;
-uint8_t base = 00000;
-// current node address
-uint8_t this_node = homeless;
+
+
+  // last address in the network, homeless address
+  uint8_t homeless = 05555;
+  uint8_t base = 00000;
+  // current node address
+  uint8_t this_node = homeless;
+  
+std::map<int,const char *> days;
 
 /****************************************************************************/
 
-mesh::mesh( RF24& _radio )
+mesh::mesh( RF24Network& _network ): network(_network) 
 {
-  network(_radio);
 }
 
 /****************************************************************************/
@@ -30,7 +30,7 @@ void mesh::begin(uint8_t _channel, uint16_t _id)
 
 bool mesh::send(const void* message, uint16_t to_id)
 {
-  uint16_t to = map.get(to_id);
+  uint16_t to = map.find(to_id);
   RF24NetworkHeader header(to, 'M');
 
   bool ok = network.write(header,&message,sizeof(message));

@@ -9,9 +9,31 @@
 #include "sleep.h"
 #include "printf.h"
 
-class mesh;
+/**
+ * Message
+ */
+struct Message
+{
+  uint16_t temp_reading;
+  uint16_t voltage_reading;
+  static char buffer[];
+  Message(void): temp_reading(0), voltage_reading(0) {}
+  char* toString(void);
+};
+
+class mesh
 {
 public:
+  /**
+   * Construct the network
+   */
+  mesh( RF24Network& _network );
+  
+  /**
+   * Bring up the network
+   */
+  void begin(uint8_t _channel, uint16_t _id );
+  
   /**
   * Send message to node with unique id.
   */
@@ -33,6 +55,11 @@ public:
   Message read();
 
 private:
+  RF24Network& network;
+  // Delay manager
+  const static uint16_t interval = 2000; // ms
+  uint16_t last_time_sent;
+  
   /**
   * Handle message with type A
   */
@@ -74,9 +101,7 @@ private:
   /**
   * Initialize new node address
   */
-  void set_address(uint16_t address)
+  void set_address(uint16_t address);
 
 };
-
-
 #endif // __MESH_H__

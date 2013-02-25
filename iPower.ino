@@ -1,5 +1,4 @@
 
-
 // Import libraries
 #include <SPI.h>
 #include "nRF24L01.h"
@@ -133,24 +132,24 @@ void loop(void)
     RF24NetworkHeader header;
     network.peek(header);
 
-    // Dispatch the message to the correct handler.
-    switch (header.type)
-    {
-      case ping: // get a ping from another node
-        handle_ping(header);
-        break;
-      case nodes: // get active nodes which another node known
-        handle_nodes(header);
-        break;
-      case payload: // get payload message
-        handle_payload(header);
-        break;
-      default:
-        // Unknown message type
-        // skip this message
-        network.read(header,0,0);
-        break;
-    };
+//    // Dispatch the message to the correct handler.
+//    switch (header.type)
+//    {
+//      case ping: // get a ping from another node
+//        handle_ping(header);
+//        break;
+//      case nodes: // get active nodes which another node known
+//        handle_nodes(header);
+//        break;
+//      case payload: // get payload message
+//        handle_payload(header);
+//        break;
+//      default:
+//        // Unknown message type
+//        // skip this message
+//        network.read(header,0,0);
+//        break;
+//    };
   }
   
   unsigned long now = millis();
@@ -159,7 +158,7 @@ void loop(void)
     last_time_sent = now;
     
     if(this_node == 99) {
-      send_ping();
+      //send_ping();
     }
     
     // go to sleep
@@ -253,70 +252,70 @@ void loop(void)
 
 /****************************************************************************/
 
-bool send_ping() {
-  
-  // send ping to someone
-  for(uint16_t to = 0; to < 99; to++) {
-    if( active_nodes.exists(to) && send_ping(to) ) {
-      // save new active node
-      add_nodes(to);
-      return true;
-    }
-  }
-  return false;
-}
+//bool send_ping() {
+//  
+//  // send ping to someone
+//  for(uint16_t to = 0; to < 99; to++) {
+//    if( active_nodes.exists(to) && send_ping(to) ) {
+//      // save new active node
+//      add_nodes(to);
+//      return true;
+//    }
+//  }
+//  return false;
+//}
+//
+///****************************************************************************/
+//
+//bool send_ping(uint16_t to) {
+//  RF24NetworkHeader header(to, ping);
+//  if( network.write(header,0,0) ) {
+//    return true;
+//  }
+//  return false;
+//}
+//
+///****************************************************************************/
+//
+//bool send_nodes(uint16_t to) {
+//  RF24NetworkHeader header(to, nodes);
+//  
+//  return network.write(header,active_nodes,sizeof(active_nodes));
+//}
 
 /****************************************************************************/
 
-bool send_ping(uint16_t to) {
-  RF24NetworkHeader header(to, ping);
-  if( network.write(header,0,0) ) {
-    return true;
-  }
-  return false;
-}
-
-/****************************************************************************/
-
-bool send_nodes(uint16_t to) {
-  RF24NetworkHeader header(to, nodes);
-  
-  return network.write(header,active_nodes,sizeof(active_nodes));
-}
-
-/****************************************************************************/
-
 
 
 
 /****************************************************************************/
 
-bool send_payload(uint16_t to) {
-  RF24NetworkHeader header(to, payload);
-  Message message;
-  return network.write(header,&message,sizeof(message));
-}
-
-/****************************************************************************/
-
-void handle_ping(RF24NetworkHeader& header) {
-  unsigned long message;
-  network.read(header,&message,sizeof(unsigned long));
-}
-
-/****************************************************************************/
-
-void handle_nodes(RF24NetworkHeader& header) {
-  static uint16_t incoming_nodes[max_active_nodes];
-  network.read(header,&incoming_nodes,sizeof(incoming_nodes));
-}
-
-/****************************************************************************/
-
-void handle_payload(RF24NetworkHeader& header) {
-  unsigned long message;
-  network.read(header,&message,sizeof(unsigned long));
-}
+//bool send_payload(uint16_t to) {
+//  RF24NetworkHeader header(to, payload);
+//  Message message;
+//  return network.write(header,&message,sizeof(message));
+//}
+//
+///****************************************************************************/
+//
+//void handle_ping(RF24NetworkHeader& header) {
+//  unsigned long message;
+//  network.read(header,&message,sizeof(unsigned long));
+//}
+//
+///****************************************************************************/
+//
+//void handle_nodes(RF24NetworkHeader& header) {
+//  static uint16_t incoming_nodes[max_active_nodes];
+//  network.read(header,&incoming_nodes,sizeof(incoming_nodes));
+//}
+//
+///****************************************************************************/
+//
+//void handle_payload(RF24NetworkHeader& header) {
+//  unsigned long message;
+//  network.read(header,&message,sizeof(unsigned long));
+//}
 
 /****************************************************************************/
 
