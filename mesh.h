@@ -85,12 +85,16 @@ private:
   * @param relay_address Find iside this relay branch,
   * 	by default finding in the root
   */
-  uint16_t get_address(uint16_t relay_address);
+  uint16_t get_new_address(uint16_t relay_address);
 
   /**
   * Initialize new node address
   */
   void set_address(uint16_t address);
-
+  
+  /**
+  * Reset
+  */
+  void flush_node();
 };
 #endif // __MESH_H__
