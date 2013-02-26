@@ -24,15 +24,21 @@ const uint16_t node_id = 00102;
 // Declare LED state
 #define LED_OFF  0
 
-// Declare relays digital pin 
+// Declare relays digital pins 
 #define RELAY_1  8
 #define RELAY_2  7
 // Declare relays state
 #define RELAY_ON  0
 #define RELAY_OFF  1
 
+// Declare pushbutton digital pin
+#define BUTTON  4
+
 // Declare ACS712 sensor analog pin
 #define ACS712PIN  A0
+
+// Debug info.
+const bool DEBUG = true;
 
 /**
  * Payload
@@ -70,9 +76,6 @@ void setup(void)
   // initialize relays pins
   pinMode(RELAY_1, OUTPUT);  
   pinMode(RELAY_2, OUTPUT);
-  
-  // initialize led, turned off
-  led(LED_OFF);
 }
 
 //
@@ -97,46 +100,132 @@ void loop(void)
 /****************************************************************************/
 
 void led(int pin) {
+  // initialize led pins
+  pinMode(LED_RED, OUTPUT);
+  pinMode(LED_GREEN, OUTPUT);
+
   switch (pin) {
     case LED_RED:
       digitalWrite(LED_RED, HIGH);
       digitalWrite(LED_GREEN, LOW);
+      if(DEBUG) printf("LED: Info: RED led is enabled.");
       return;
     case LED_GREEN:
       digitalWrite(LED_GREEN, HIGH);
       digitalWrite(LED_RED, LOW);
+      if(DEBUG) printf("LED: Info: GREEN led is enabled.");
       return;
     default: 
       digitalWrite(LED_GREEN, LOW);
       digitalWrite(LED_RED, LOW);
-      // initialize led pins
-      pinMode(LED_RED, OUTPUT);
-      pinMode(LED_GREEN, OUTPUT);
+      if(DEBUG) printf("LED: Info: Leds off.");
       return;
   }
 }
 
 /****************************************************************************/
 
-bool read_DHT11(int humidity&, int temperature&) {
+int read_button() {
+  // initialize pushbutton pin
+  pinMode(BUTTON, INPUT);
+
+  // is button released?
+  if(digitalRead(BUTTON) == LOW) {
+    return 0;
+  }
+  // wait for checking
+  delay(1000);
+  if(digitalRead(BUTTON) == LOW) {
+    // skip if it pushed occasional
+    return 0;
+  }
+
+  if(DEBUG) printf("BUTTON: Info: Button is pushed. And waiting for commands.");
+  // turned off leds
+  led(LED_OFF);
+
+  int count_pushed = 0;
+  while( button_pushed() ) {
+    count_pushed++;
+    if(DEBUG) printf("BUTTON: Info: Button is pushed: %d times", count_pushed);
+  }
+  return count_pushed;
+}
+
+/****************************************************************************/
+
+  bool button_pushed() {
+    // wait for release the button
+    delay(500);
+    if(digitalRead(BUTTON) == HIGH) {
+      return false;
+    }
+    led(GREEN);
+    // wait for push the button
+    delay(500);
+    if(digitalRead(BUTTON) == HIGH) {
+      led(LED_OFF);
+      return true;
+    }
+  }
+
+/****************************************************************************/
+
+void relay()
+
+/****************************************************************************/
+
+bool read_DHT11(int& humidity, int& temperature) {
   dht11 DHT11;
   int state = DHT11.read(DHT11PIN);
   switch (state) {
     case DHTLIB_OK:
       humidity = DHT11.humidity;
       temperature = DHT11.temperature;
+      if(DEBUG) printf("DH11: Info: Sensor values: humidity: %d, 
+                        temperature: %d.\n\r", humidity, temperature);
       return true;
     case DHTLIB_ERROR_CHECKSUM:  
-      
+      printf("DH11: Error: Checksum test failed!: 
+              The data was received but may be incorrect!\n\r");
       return false;
     case DHTLIB_ERROR_TIMEOUT: 
-      
+      printf("DH11: Error: Timeout occured!: Communication failed!\n\r");
       return false;
     default: 
-      
+      printf("DH11: Error: Unknown error!\n\r");
       return false;
   }
 }
 
 /****************************************************************************/
 
+bool read_ACS712(float& amperage) {
+////  // turn on pullup resistors
+////  pinMode(sensorPin, INPUT);
+////  digitalWrite(sensorPin, HIGH);
+////  // sensitivity
+////  int cycleCount = 700;
+////  float sum = 0;
+////  for(int i = 0; i < cycleCount; i++) {
+////    float sensor = analogRead(sensorPin);
+////    
+////    if(sensor-zeroValue < -2.5) {
+////      sensor = zeroValue + ((sensor-zeroValue) * (-1));
+////    }
+////    sum = sum + sensor;
+////    delay(10);
+////  }
+////  // calculate
+////  float sensorValue = sum / cycleCount;
+////  float delta = sensorValue - zeroValue;
+////  float voltage = delta * 0.00488 * 1000; // 5V/1024
+////  float current = voltage / 100; // 100mv = 1A
+////  
+////    // Debug info
+////  printf("\n\r sensorValue: %d, delta: %d, voltage: $d", sensorValue, delta, voltage);
+////  
+////  return current;
+}
+
+/****************************************************************************/
