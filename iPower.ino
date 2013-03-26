@@ -25,8 +25,8 @@ const uint16_t node_id = 00102;
 #define LED_OFF  0
 
 // Declare relays digital pins 
-#define RELAY_1  8
-#define RELAY_2  7
+const uint8_t relay_pins[] = {7, 8};
+uint8_t relay_states[sizeof(relay_pins)];
 
 // Declare pushbutton digital pin
 #define BUTTON  4
@@ -40,18 +40,18 @@ const bool DEBUG = true;
 /**
  * Payload
  */
-struct Payload
-{
-  int humidity;
-  int temperature;
-  bool relay_1;
-  bool relay_2;
-  float power; 
-  char* DHT11_state;
-  char* ACS712_state;
+//struct Payload
+//{
+//  int humidity;
+//  int temperature;
+//  bool relay_1;
+//  bool relay_2;
+ // float power; 
+ // char* DHT11_state;
+//  char* ACS712_state;
   //Payload(void): DHT11_reading() {}
-  char* toString(void) {  };
-};
+//  char* toString(void) {  };
+//};
 
 //
 // Setup
@@ -188,19 +188,30 @@ bool button_pushed() {
 
 /****************************************************************************/
 
-void relay_on(int pin) {
+void relay_on(int index) {
   const int ON = 0;
-  // initialize relay pin
-  pinMode(pin, OUTPUT);
-
-  digitalWrite(pin, ON);
-
-  relay
+  if(relay_states[index] == false) {
+    // initialize relay pin
+    pinMode(relay_pins[index], OUTPUT);
+    // turning on
+    digitalWrite(relay_pins[index], ON);
+    // save state
+    relay_states[index] = true;
+    if(DEBUG) printf("RELAY: Info: Relay #%d is enabled.\n\r", index);
+  }
 }
 
-void relay_off(int pin) {
-  const int OFF = 1;
+/****************************************************************************/
 
+void relay_off(int index) {
+  const int OFF = 1;
+  if(relay_states[index]) {
+    // turning off
+    digitalWrite(relay_pins[index], OFF);
+    // save state
+    relay_states[index] = false;
+    if(DEBUG) printf("RELAY: Info: Relay #%d is disabled.\n\r", index);
+  }
 }
 
 /****************************************************************************/
