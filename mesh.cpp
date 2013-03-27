@@ -175,11 +175,8 @@ void Mesh::handle_I(RF24NetworkHeader& header)
   // add new or update existing node
   nodes[id] = header.from_node;
   
-  printf_P(PSTR("%u, %u: Node is updated its map: "), node_id, node_address);
-  for(int index=0; index<nodes.size(); index++) {
-    printf_P(PSTR("[%u, %u], "), nodes.keyAt(index), nodes.valueAt(index));
-  }
-  printf_P(PSTR("\n\r"));
+  printf_P(PSTR("%u, %u: Node is updated its map: %s"), 
+    node_id, node_address, nodes.toString());
 }
 
 /****************************************************************************/

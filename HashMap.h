@@ -224,6 +224,23 @@ class HashMap
       nil = nullv;
     }
 
+    char* toString() 
+    {      
+      if(size() == 0)
+        return "{}";
+
+      char* buffer;
+      sprintf(buffer, "{");
+      for(int i=0, int size=size(); i<size; i++) {
+        sprintf(buffer, "%s=%d", keyAt(i), valueAt(i));
+        if(i<size-1)
+          sprintf(buffer, ", ");
+        else
+          sprintf(buffer, "}");
+      }
+      return buffer;
+    }
+
   protected:
     K keys[capacity];
     V values[capacity];

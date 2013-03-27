@@ -5,6 +5,8 @@
 #include "Mesh.h"
 #include "printf.h"
 #include "dht11.h"
+#include "HashMap.h"
+#include "Payload.h"
 
 // Set up nRF24L01 radio on SPI bus pin CE and CS
 RF24 radio(9,10);
@@ -14,6 +16,8 @@ Mesh mesh(radio);
 const uint8_t channel = 100;
 // Declare unique node id
 const uint16_t node_id = 00102;
+// Declare base id
+const uint16_t base_id = 00001;
 
 // Declare DHT11 sensor digital pin
 #define DHT11PIN  3
@@ -26,6 +30,7 @@ const uint16_t node_id = 00102;
 
 // Declare relays digital pins 
 const uint8_t relay_pins[] = {7, 8};
+// Relays state (on, off)
 uint8_t relay_states[sizeof(relay_pins)];
 
 // Declare pushbutton digital pin
@@ -33,25 +38,16 @@ uint8_t relay_states[sizeof(relay_pins)];
 
 // Declare ACS712 sensor analog pin
 #define ACS712PIN  A0
+// Shifting value for calibrate sensor
+float ACS712_shift = 0;
+// How many reading cycle?
+int ACS712_sensitivity = 700;
+
+// Declare payload
+Payload payload;
 
 // Debug info.
 const bool DEBUG = true;
-
-/**
- * Payload
- */
-//struct Payload
-//{
-//  int humidity;
-//  int temperature;
-//  bool relay_1;
-//  bool relay_2;
- // float power; 
- // char* DHT11_state;
-//  char* ACS712_state;
-  //Payload(void): DHT11_reading() {}
-//  char* toString(void) {  };
-//};
 
 //
 // Setup
@@ -66,13 +62,6 @@ void setup(void)
   radio.begin();
   // initialize network
   mesh.begin(channel, node_id);
-  
-  // initialize relays, turned off
-  //digitalWrite(RELAY_1, RELAY_OFF);
-  //digitalWrite(RELAY_2, RELAY_OFF);
-  // initialize relays pins
-  //pinMode(RELAY_1, OUTPUT);  
-  //pinMode(RELAY_2, OUTPUT);
 }
 
 //
@@ -83,16 +72,34 @@ void loop(void)
   // update network
   mesh.update();
   
+  // new message available
   while( mesh.available() ) 
   {
-    Payload payload;
     mesh.read(&payload);
-    
-    payload.toString();
+    if(DEBUG) printf("MESH: Info: Got payload: ", payload.toString());
+
+    payload.controls
   }
   
+  // connection ready
+  if( mesh.ready() )
+  {
+    // create message
+    create_payload(payload);
+    // send message to base
+    mesh.send(payload, base_id);
+  }
   
+  // check button
+  handle_button();
 }
+
+void create_payload(void* payload)
+{
+
+}
+
+
 
 /****************************************************************************/
 
@@ -126,13 +133,20 @@ void handle_button() {
   
   switch ( read_button() ) {
     case 1:
-
+      led(LED_RED);
+      // turning ON relay #1
+      relay_on(1);
       return;
     case 2:
-
+      led(LED_RED);
+      // turning ON relay #2
+      relay_on(2);
       return;
     case 3:
-
+      // turning OFF relay #1 and #2
+      relay_off(1);
+      relay_off(2);
+      led(LED_OFF);
       return;
     default:
       return;
@@ -240,38 +254,54 @@ bool read_DHT11(int& humidity, int& temperature) {
 
 /****************************************************************************/
 
-bool read_ACS712(float& amperage) {
+void read_ACS712(float& amperage) {
+  // check relays state
+  if( relay_states[1] == false 
+      && relay_states[2] == false ) {
+    // calibarate zero value
+    calibrate_ACS712();
+    amperage = 0;
+    return;
+  }
+  // turn on pullup resistors
+  pinMode(ACS712PIN, INPUT);
+  digitalWrite(ACS712PIN, HIGH);
 
-  //if( relays_off ) {
-    //calibrated_zero
+  float sum = 0;
+  for(int i = 0; i < ACS712_sensitivity; i++) {
+    float value = analogRead(ACS712PIN);
 
-  //}
+    if(value-ACS712_shift < -2.5) {
+      value = ACS712_shift + ((value-ACS712_shift) * (-1));
+    }
+    sum = sum + value;
+    delay(10);
+  }
+  // calculate
+  float sensor = sum / ACS712_sensitivity;
+  float delta = sensor - ACS712_shift;
+  float voltage = delta * 0.00488 * 1000; // 5V/1024
+  float amperage = voltage / 100; // 100mv = 1A
+  
+  // Debug info
+  if(DEBUG) printf("ACS712: Info: sensor: %d, delta: %d, voltage: $d, 
+    amperage: $d \n\r", sensor, delta, voltage, amperage);
+}
 
-////  // turn on pullup resistors
-////  pinMode(sensorPin, INPUT);
-////  digitalWrite(sensorPin, HIGH);
-////  // sensitivity
-////  int cycleCount = 700;
-////  float sum = 0;
-////  for(int i = 0; i < cycleCount; i++) {
-////    float sensor = analogRead(sensorPin);
-////    
-////    if(sensor-zeroValue < -2.5) {
-////      sensor = zeroValue + ((sensor-zeroValue) * (-1));
-////    }
-////    sum = sum + sensor;
-////    delay(10);
-////  }
-////  // calculate
-////  float sensorValue = sum / cycleCount;
-////  float delta = sensorValue - zeroValue;
-////  float voltage = delta * 0.00488 * 1000; // 5V/1024
-////  float current = voltage / 100; // 100mv = 1A
-////  
-////    // Debug info
-////  printf("\n\r sensorValue: %d, delta: %d, voltage: $d", sensorValue, delta, voltage);
-////  
-////  return current;
+/****************************************************************************/
+
+void calibrate_ACS712() {
+  // turn on pullup resistors
+  pinMode(ACS712PIN, INPUT);
+  digitalWrite(ACS712PIN, HIGH);       
+
+  float sum = 0;
+  for(int i = 0; i < ACS712_sensitivity; i++) {
+    sum = sum + analogRead(ACS712PIN);
+    delay(10);
+  }
+  // update zero value
+  ACS712_shift = sum / ACS712_sensitivity;
 }
 
 /****************************************************************************/
