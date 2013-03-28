@@ -226,12 +226,13 @@ class HashMap
 
     char* toString() 
     {      
-      if(size() == 0)
+      int size = currentIndex;
+      if(size == 0)
         return "{}";
 
       char* buffer;
       sprintf(buffer, "{");
-      for(int i=0, int size=size(); i<size; i++) {
+      for(int i=0; i<size; i++) {
         sprintf(buffer, "%s=%d", keyAt(i), valueAt(i));
         if(i<size-1)
           sprintf(buffer, ", ");

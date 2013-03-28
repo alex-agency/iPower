@@ -29,6 +29,11 @@ public:
   void begin(uint8_t _channel, uint16_t _node_id );
   
   /**
+  * Check network connection
+  */
+  bool ready(void);
+
+  /**
   * Send message to node with unique id.
   */
   bool send(const void* message, uint16_t to_id);

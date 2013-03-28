@@ -11,12 +11,13 @@
  */
 struct Payload
 {
-	HashMap sensors;
-  	HashMap controls;
-  	char* print()
+	HashMap<char*,float,10> sensors;
+  	HashMap<char*,bool,10> controls;
+  	char* toString()
   	{
-  		printf_P(PSTR("Sensors: %s, Controls: %s", 
-  			sensors.toString(), controls.toString()));
+          char* buffer;
+  	  sprintf(buffer, "Sensors: %s, Controls: %s", 
+  		sensors.toString(), controls.toString());
   	};
 };
 #endif // __PAYLOAD_H__

@@ -45,6 +45,12 @@ int ACS712_sensitivity = 700;
 
 // Declare payload
 Payload payload;
+// Define payload keys
+#define HUMIDITY  "humidity"
+#define TEMPERATURE  "temperature"
+#define AMPERAGE  "amperage"
+#define RELAY1  "relay1"
+#define RELAY2  "relay2"
 
 // Debug info.
 const bool DEBUG = true;
@@ -52,7 +58,7 @@ const bool DEBUG = true;
 //
 // Setup
 //
-void setup(void)
+void setup()
 {
   // Configure console
   Serial.begin(57600);
@@ -67,39 +73,62 @@ void setup(void)
 //
 // Loop
 //
-void loop(void)
+void loop()
 {
   // update network
   mesh.update();
-  
-  // new message available
-  while( mesh.available() ) 
-  {
-    mesh.read(&payload);
-    if(DEBUG) printf("MESH: Info: Got payload: ", payload.toString());
 
-    payload.controls
+  // new message available
+  while( mesh.available() ) {
+    mesh.read(&payload);
+    if(DEBUG) printf("MESH: Info: Got payload: %s", payload.toString());
+
+    if( payload.controls[RELAY1] )
+      relay_on(1);
+    else
+      relay_off(1);
+    
+    if( payload.controls[RELAY2] )
+      relay_on(2);
+    else
+      relay_off(2);
   }
   
   // connection ready
-  if( mesh.ready() )
-  {
+  if( mesh.ready() ) {
+    led(LED_GREEN);
     // create message
-    create_payload(payload);
+    create_payload();
     // send message to base
-    mesh.send(payload, base_id);
+    mesh.send(&payload, base_id);
+  } else {
+    led(LED_RED);
   }
-  
+
   // check button
   handle_button();
 }
 
-void create_payload(void* payload)
-{
+/****************************************************************************/
 
+void create_payload() {
+  int humidity = 0;
+  int temperature = 0;
+  float amperage = 0;
+  
+  if( read_DHT11(humidity, temperature) ) {
+    payload.sensors[HUMIDITY] = humidity;
+    payload.sensors[TEMPERATURE] = temperature;
+  }
+
+  read_ACS712(amperage);
+  payload.sensors[AMPERAGE] = amperage;
+
+  payload.controls[RELAY1] = relay_states[1];
+  payload.controls[RELAY2] = relay_states[2];
+
+  if(DEBUG) printf("PAYLOAD: Info: Created payload: %s", payload.toString());
 }
-
-
 
 /****************************************************************************/
 
@@ -281,11 +310,11 @@ void read_ACS712(float& amperage) {
   float sensor = sum / ACS712_sensitivity;
   float delta = sensor - ACS712_shift;
   float voltage = delta * 0.00488 * 1000; // 5V/1024
-  float amperage = voltage / 100; // 100mv = 1A
+  amperage = voltage / 100; // 100mv = 1A
   
   // Debug info
-  if(DEBUG) printf("ACS712: Info: sensor: %d, delta: %d, voltage: $d, 
-    amperage: $d \n\r", sensor, delta, voltage, amperage);
+  if(DEBUG) printf("ACS712: Info: sensor: %d, delta: %d, voltage: $d, amperage: $d \n\r", 
+    sensor, delta, voltage, amperage);
 }
 
 /****************************************************************************/

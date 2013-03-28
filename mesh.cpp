@@ -39,6 +39,13 @@ void Mesh::begin(uint8_t _channel, uint16_t _node_id)
 
 /****************************************************************************/
 
+bool Mesh::ready()
+{
+  return false;
+}
+
+/****************************************************************************/
+
 bool Mesh::send(const void* message, uint16_t to_id)
 {
   if( nodes.contains(to_id) == false ) {
