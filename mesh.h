@@ -29,7 +29,7 @@ public:
   void begin(uint8_t _channel, uint16_t _node_id );
   
   /**
-  * Check network connection
+  * Check connection
   */
   bool ready(void);
 
@@ -63,6 +63,7 @@ private:
   const static uint16_t homeless = 05555; /**< homeless address is last address in the network */
   const static uint16_t interval = 2000; /**< Delay manager in ms */
   uint16_t last_time_sent;
+  bool state_ready; /**< connection state */
   
   /**
   * Handle message with type A, handle Address Node request

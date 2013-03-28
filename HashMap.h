@@ -233,7 +233,7 @@ class HashMap
       char* buffer;
       sprintf(buffer, "{");
       for(int i=0; i<size; i++) {
-        sprintf(buffer, "%s=%d", keyAt(i), valueAt(i));
+        sprintf(buffer, "%s=%d", keys[i], values[i]);
         if(i<size-1)
           sprintf(buffer, ", ");
         else

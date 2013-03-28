@@ -40,12 +40,12 @@ uint8_t relay_states[sizeof(relay_pins)];
 #define ACS712PIN  A0
 // Shifting value for calibrate sensor
 float ACS712_shift = 0;
-// How many reading cycle?
+// Sensor reading cycle count
 int ACS712_sensitivity = 700;
 
 // Declare payload
 Payload payload;
-// Define payload keys
+// Declare payload keys
 #define HUMIDITY  "humidity"
 #define TEMPERATURE  "temperature"
 #define AMPERAGE  "amperage"
@@ -63,7 +63,7 @@ void setup()
   // Configure console
   Serial.begin(57600);
   printf_begin();
-  
+
   // initialize radio
   radio.begin();
   // initialize network
@@ -81,7 +81,7 @@ void loop()
   // new message available
   while( mesh.available() ) {
     mesh.read(&payload);
-    if(DEBUG) printf("MESH: Info: Got payload: %s", payload.toString());
+    if(DEBUG) printf("PAYLOAD: Info: Got payload: %s", payload.toString());
 
     if( payload.controls[RELAY1] )
       relay_on(1);
@@ -112,18 +112,11 @@ void loop()
 /****************************************************************************/
 
 void create_payload() {
-  int humidity = 0;
-  int temperature = 0;
-  float amperage = 0;
-  
-  if( read_DHT11(humidity, temperature) ) {
-    payload.sensors[HUMIDITY] = humidity;
-    payload.sensors[TEMPERATURE] = temperature;
-  }
-
-  read_ACS712(amperage);
-  payload.sensors[AMPERAGE] = amperage;
-
+  // get DHT11 sensor value
+  read_DHT11(payload.sensors[HUMIDITY], payload.sensors[TEMPERATURE]);
+  // get ACS712 sensor value
+  read_ACS712(payload.sensors[AMPERAGE]);
+  // get relays state
   payload.controls[RELAY1] = relay_states[1];
   payload.controls[RELAY2] = relay_states[2];
 
@@ -199,14 +192,15 @@ int read_button() {
     return 0;
   }
 
-  if(DEBUG) printf("BUTTON: Info: Button is pushed. And waiting for commands.\n\r");
+  if(DEBUG) printf("BUTTON: Info: Button is waiting for commands.\n\r");
   // turned off leds
   led(LED_OFF);
 
   int count_pushed = 0;
   while( button_pushed() ) {
     count_pushed++;
-    if(DEBUG) printf("BUTTON: Info: Button is pushed: %d times.\n\r", count_pushed);
+    if(DEBUG) printf("BUTTON: Info: Button is pushed: %d times.\n\r", 
+      count_pushed);
   }
   return count_pushed;
 }
@@ -259,24 +253,24 @@ void relay_off(int index) {
 
 /****************************************************************************/
 
-bool read_DHT11(int& humidity, int& temperature) {
+bool read_DHT11(float& humidity, float& temperature) {
   dht11 DHT11;
   int state = DHT11.read(DHT11PIN);
   switch (state) {
     case DHTLIB_OK:
       humidity = DHT11.humidity;
       temperature = DHT11.temperature;
-      if(DEBUG) printf("DH11: Info: Sensor values: humidity: %d, temperature: %d.\n\r", 
+      if(DEBUG) printf("DHT11: Info: Sensor values: humidity: %d, temperature: %d\n\r", 
                           humidity, temperature);
       return true;
     case DHTLIB_ERROR_CHECKSUM:  
-      printf("DH11: Error: Checksum test failed!: The data may be incorrect!\n\r");
+      printf("DHT11: Error: Checksum test failed!: The data may be incorrect!\n\r");
       return false;
     case DHTLIB_ERROR_TIMEOUT: 
-      printf("DH11: Error: Timeout occured!: Communication failed!\n\r");
+      printf("DHT11: Error: Timeout occured!: Communication failed!\n\r");
       return false;
     default: 
-      printf("DH11: Error: Unknown error!\n\r");
+      printf("DHT11: Error: Unknown error!\n\r");
       return false;
   }
 }
@@ -311,9 +305,8 @@ void read_ACS712(float& amperage) {
   float delta = sensor - ACS712_shift;
   float voltage = delta * 0.00488 * 1000; // 5V/1024
   amperage = voltage / 100; // 100mv = 1A
-  
-  // Debug info
-  if(DEBUG) printf("ACS712: Info: sensor: %d, delta: %d, voltage: $d, amperage: $d \n\r", 
+
+  if(DEBUG) printf("ACS712: Info: sensor: %f, delta: %f, voltage: $f, amperage: $f\n\r", 
     sensor, delta, voltage, amperage);
 }
 

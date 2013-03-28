@@ -6,8 +6,6 @@
 
 /**
  * Payload
- *
- * This structure implements main object which contains module info
  */
 struct Payload
 {
@@ -15,9 +13,11 @@ struct Payload
   	HashMap<char*,bool,10> controls;
   	char* toString()
   	{
-          char* buffer;
-  	  sprintf(buffer, "Sensors: %s, Controls: %s", 
-  		sensors.toString(), controls.toString());
+    	char* buffer;
+  		sprintf(buffer, "Sensors: %s, Controls: %s", 
+  			sensors.toString(), controls.toString());
+  		return buffer;
   	};
 };
+
 #endif // __PAYLOAD_H__
