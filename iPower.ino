@@ -102,7 +102,7 @@ void loop()
     // send message to base
     mesh.send(&payload, base_id);
   } else {
-    led(LED_RED);
+    //led(LED_RED);
   }
 
   // check button
@@ -134,12 +134,12 @@ void led(int pin) {
     case LED_RED:
       digitalWrite(LED_RED, HIGH);
       digitalWrite(LED_GREEN, LOW);
-      if(DEBUG) printf("LED: Info: RED led is enabled.\n\r");
+      //if(DEBUG) printf("LED: Info: RED led is enabled.\n\r");
       return;
     case LED_GREEN:
       digitalWrite(LED_GREEN, HIGH);
       digitalWrite(LED_RED, LOW);
-      if(DEBUG) printf("LED: Info: GREEN led is enabled.\n\r");
+      //if(DEBUG) printf("LED: Info: GREEN led is enabled.\n\r");
       return;
     default: 
       digitalWrite(LED_GREEN, LOW);
@@ -182,11 +182,11 @@ int read_button() {
   pinMode(BUTTON, INPUT);
 
   // is button released?
-  if(digitalRead(BUTTON) == LOW) {
+  if(digitalRead(BUTTON) != HIGH) {
     return 0;
   }
-  delay(1000);
-  if(digitalRead(BUTTON) == LOW) {
+  delay(2000);
+  if(digitalRead(BUTTON) != HIGH) {
     // skip if it pushed by mistake
     printf("BUTTON: Error: Sticky button!\n\r");
     return 0;
@@ -209,13 +209,13 @@ int read_button() {
 
 bool button_pushed() {
   // wait for release a button
-  delay(500);
+  delay(1000);
   if(digitalRead(BUTTON) == HIGH) {
     return false;
   }
   led(LED_GREEN);
   // wait for push a button
-  delay(500);
+  delay(1000);
   if(digitalRead(BUTTON) == HIGH) {
     led(LED_OFF);
     return true;
