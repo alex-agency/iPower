@@ -115,8 +115,8 @@ void Mesh::update()
         printf_P(PSTR("MESH: Info: %u, %u: Address request: Send: ok\n\r"),
                   node_id, node_address);
       } else {
-        //printf_P(PSTR("MESH: Info: %u, %u: Address request: Send: failed\n\r"),
-        //          node_id, node_address);
+        printf_P(PSTR("MESH: Info: %d, %d: Address request: Send: failed\n\r"),
+                  node_id, node_address);
       }
     }
   }

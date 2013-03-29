@@ -68,6 +68,25 @@ void setup()
   radio.begin();
   // initialize network
   mesh.begin(channel, node_id);
+
+  // initialize pushbutton pin
+  //pinMode(BUTTON, INPUT);
+  // turn on internal pullup resistor
+  //digitalWrite(BUTTON, HIGH);
+
+  // initialize button pin with internal pullup resistor
+  pinMode(BUTTON, INPUT_PULLUP);
+
+  // initialize led pins
+  pinMode(LED_RED, OUTPUT);
+  pinMode(LED_GREEN, OUTPUT);
+
+  // turn on pullup resistors
+  //pinMode(ACS712PIN, INPUT);
+  //digitalWrite(ACS712PIN, HIGH);
+
+  // initialize sensor pin with internal pullup resistor
+  pinMode(ACS712PIN, INPUT_PULLUP);
 }
 
 //
@@ -126,25 +145,21 @@ void create_payload() {
 /****************************************************************************/
 
 void led(int pin) {
-  // initialize led pins
-  pinMode(LED_RED, OUTPUT);
-  pinMode(LED_GREEN, OUTPUT);
-
   switch (pin) {
+    // enable red led
     case LED_RED:
       digitalWrite(LED_RED, HIGH);
       digitalWrite(LED_GREEN, LOW);
-      //if(DEBUG) printf("LED: Info: RED led is enabled.\n\r");
       return;
+    // enable green led
     case LED_GREEN:
       digitalWrite(LED_GREEN, HIGH);
       digitalWrite(LED_RED, LOW);
-      //if(DEBUG) printf("LED: Info: GREEN led is enabled.\n\r");
       return;
+    // turn off leds
     default: 
       digitalWrite(LED_GREEN, LOW);
       digitalWrite(LED_RED, LOW);
-      if(DEBUG) printf("LED: Info: Leds turned off.\n\r");
       return;
   }
 }
@@ -152,7 +167,6 @@ void led(int pin) {
 /****************************************************************************/
 
 void handle_button() {
-  
   switch ( read_button() ) {
     case 1:
       led(LED_RED);
@@ -178,23 +192,20 @@ void handle_button() {
 /****************************************************************************/
 
 int read_button() {
-  // initialize pushbutton pin
-  pinMode(BUTTON, INPUT);
-
   // is button released?
-  if(digitalRead(BUTTON) != HIGH) {
+  if(digitalRead(BUTTON) == HIGH) {
     return 0;
   }
+  // pushing button for 2 sec
   delay(2000);
-  if(digitalRead(BUTTON) != HIGH) {
+  if(digitalRead(BUTTON) == HIGH) {
     // skip if it pushed by mistake
-    printf("BUTTON: Error: Sticky button!\n\r");
+    printf("BUTTON: Error: Incorrect push!\n\r");
     return 0;
   }
-
-  if(DEBUG) printf("BUTTON: Info: Button is waiting for commands.\n\r");
-  // turned off leds
+  // turn off leds
   led(LED_OFF);
+  if(DEBUG) printf("BUTTON: Info: Button is waiting for commands.\n\r");
 
   int count_pushed = 0;
   while( button_pushed() ) {
@@ -208,15 +219,15 @@ int read_button() {
 /****************************************************************************/
 
 bool button_pushed() {
-  // wait for release a button
-  delay(1000);
-  if(digitalRead(BUTTON) == HIGH) {
+  // wait for release button
+  delay(2000);
+  if(digitalRead(BUTTON) != HIGH) {
     return false;
   }
   led(LED_GREEN);
-  // wait for push a button
+  // wait for push button
   delay(1000);
-  if(digitalRead(BUTTON) == HIGH) {
+  if(digitalRead(BUTTON) != HIGH) {
     led(LED_OFF);
     return true;
   }
@@ -286,9 +297,6 @@ void read_ACS712(float& amperage) {
     amperage = 0;
     return;
   }
-  // turn on pullup resistors
-  pinMode(ACS712PIN, INPUT);
-  digitalWrite(ACS712PIN, HIGH);
 
   float sum = 0;
   for(int i = 0; i < ACS712_sensitivity; i++) {
@@ -306,17 +314,13 @@ void read_ACS712(float& amperage) {
   float voltage = delta * 0.00488 * 1000; // 5V/1024
   amperage = voltage / 100; // 100mv = 1A
 
-  if(DEBUG) printf("ACS712: Info: sensor: %f, delta: %f, voltage: $f, amperage: $f\n\r", 
+  if(DEBUG) printf("ACS712: Info: sensor: %f, delta: %f, voltage: %f, amperage: %f\n\r", 
     sensor, delta, voltage, amperage);
 }
 
 /****************************************************************************/
 
 void calibrate_ACS712() {
-  // turn on pullup resistors
-  pinMode(ACS712PIN, INPUT);
-  digitalWrite(ACS712PIN, HIGH);       
-
   float sum = 0;
   for(int i = 0; i < ACS712_sensitivity; i++) {
     sum = sum + analogRead(ACS712PIN);
@@ -324,6 +328,7 @@ void calibrate_ACS712() {
   }
   // update zero value
   ACS712_shift = sum / ACS712_sensitivity;
+  if(DEBUG) printf("ACS712: Info: Calibrated: shift is %f\n\r", ACS712_shift);
 }
 
 /****************************************************************************/
