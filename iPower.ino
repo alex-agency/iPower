@@ -13,11 +13,11 @@ RF24 radio(9,10);
 // Set up Mesh network
 Mesh mesh(radio);
 // Declare radio channel 1-128
-const uint8_t channel = 100;
+const uint8_t channel = 90;
 // Declare unique node id
-const uint16_t node_id = 00102;
-// Declare base id
-const uint16_t base_id = 00001;
+const uint16_t node_id = 1001;
+// Declare base id, it should be 00
+const uint16_t base_id = 00;
 
 // Declare DHT11 sensor digital pin
 #define DHT11PIN  3
@@ -28,7 +28,7 @@ const uint16_t base_id = 00001;
 // Declare LED state
 #define LED_OFF  0
 
-// Declare relays digital pins 
+// Declare relays digital pins
 const uint8_t relay_pins[] = {7, 8};
 // Relays state (on, off)
 uint8_t relay_states[sizeof(relay_pins)];
@@ -69,21 +69,12 @@ void setup()
   // initialize network
   mesh.begin(channel, node_id);
 
-  // initialize pushbutton pin
-  //pinMode(BUTTON, INPUT);
-  // turn on internal pullup resistor
-  //digitalWrite(BUTTON, HIGH);
-
   // initialize button pin with internal pullup resistor
   pinMode(BUTTON, INPUT_PULLUP);
 
   // initialize led pins
   pinMode(LED_RED, OUTPUT);
   pinMode(LED_GREEN, OUTPUT);
-
-  // turn on pullup resistors
-  //pinMode(ACS712PIN, INPUT);
-  //digitalWrite(ACS712PIN, HIGH);
 
   // initialize sensor pin with internal pullup resistor
   pinMode(ACS712PIN, INPUT_PULLUP);
@@ -103,14 +94,14 @@ void loop()
     if(DEBUG) printf("PAYLOAD: Info: Got payload: %s", payload.toString());
 
     if( payload.controls[RELAY1] )
+      relay_on(0);
+    else
+      relay_off(0);
+    
+    if( payload.controls[RELAY2] )
       relay_on(1);
     else
       relay_off(1);
-    
-    if( payload.controls[RELAY2] )
-      relay_on(2);
-    else
-      relay_off(2);
   }
   
   // connection ready
@@ -119,9 +110,7 @@ void loop()
     // create message
     create_payload();
     // send message to base
-    mesh.send(&payload, base_id);
-  } else {
-    //led(LED_RED);
+    //mesh.send(&payload, base_id);
   }
 
   // check button
@@ -132,14 +121,18 @@ void loop()
 
 void create_payload() {
   // get DHT11 sensor value
-  read_DHT11(payload.sensors[HUMIDITY], payload.sensors[TEMPERATURE]);
+  //read_DHT11(payload.sensors[HUMIDITY], payload.sensors[TEMPERATURE]);
+  int temperature, humidity;
+  read_DHT11(humidity, temperature);
   // get ACS712 sensor value
-  read_ACS712(payload.sensors[AMPERAGE]);
+  //read_ACS712(payload.sensors[AMPERAGE]);
+  float amperage;
+  read_ACS712(amperage);
   // get relays state
-  payload.controls[RELAY1] = relay_states[1];
-  payload.controls[RELAY2] = relay_states[2];
+  //payload.controls[RELAY1] = relay_states[0];
+  //payload.controls[RELAY2] = relay_states[1];
 
-  if(DEBUG) printf("PAYLOAD: Info: Created payload: %s", payload.toString());
+  //if(DEBUG) printf("PAYLOAD: Info: Created payload: %s", payload.toString());
 }
 
 /****************************************************************************/
@@ -166,23 +159,34 @@ void led(int pin) {
 
 /****************************************************************************/
 
+void led_blink(int pin, int count) {
+  led(LED_OFF);
+  for(int i=0; i<count; i++) {
+    delay(300);
+    led(pin);
+    delay(150);
+    led(LED_OFF);
+  }
+}
+
+/****************************************************************************/
+
 void handle_button() {
   switch ( read_button() ) {
     case 1:
       led(LED_RED);
       // turning ON relay #1
-      relay_on(1);
+      relay_on(0);
       return;
     case 2:
       led(LED_RED);
       // turning ON relay #2
-      relay_on(2);
+      relay_on(1);
       return;
     case 3:
       // turning OFF relay #1 and #2
+      relay_off(0);
       relay_off(1);
-      relay_off(2);
-      led(LED_OFF);
       return;
     default:
       return;
@@ -192,46 +196,51 @@ void handle_button() {
 /****************************************************************************/
 
 int read_button() {
-  // is button released?
+  // 1: exit if button released
   if(digitalRead(BUTTON) == HIGH) {
     return 0;
   }
-  // pushing button for 2 sec
-  delay(2000);
+  // 2: exit if first push shorter than 1 sec
+  led(LED_GREEN);
+  delay(1000);
   if(digitalRead(BUTTON) == HIGH) {
     // skip if it pushed by mistake
-    printf("BUTTON: Error: Incorrect push!\n\r");
+    led(LED_OFF);
+    printf("BUTTON: Error: Incorrect push! It's too short.\n\r");
     return 0;
   }
-  // turn off leds
+  // 3: exit if first push longer than 1,5 sec
   led(LED_OFF);
-  if(DEBUG) printf("BUTTON: Info: Button is waiting for commands.\n\r");
-
-  int count_pushed = 0;
-  while( button_pushed() ) {
-    count_pushed++;
-    if(DEBUG) printf("BUTTON: Info: Button is pushed: %d times.\n\r", 
-      count_pushed);
-  }
-  return count_pushed;
-}
-
-/****************************************************************************/
-
-bool button_pushed() {
-  // wait for release button
-  delay(2000);
+  delay(500);
   if(digitalRead(BUTTON) != HIGH) {
-    return false;
-  }
-  led(LED_GREEN);
-  // wait for push button
-  delay(1000);
-  if(digitalRead(BUTTON) != HIGH) {
+    // skip if it pushed by mistake
     led(LED_OFF);
-    return true;
+    printf("BUTTON: Error: Incorrect push! It's too long.\n\r");
+    return 0;
   }
-  return false;
+  // 4: counting push
+  int count_pushed = 0;
+  byte last_button_state;
+  if(DEBUG) printf("BUTTON: Info: Button is waiting for commands.\n\r");
+  int wait = 3000;
+  long last_pushed = millis();
+  while(millis() < wait+last_pushed) {
+    // read button
+    byte button = digitalRead(BUTTON);
+    // check for changing state from release to push
+    if(button != last_button_state && button != HIGH) {
+      led(LED_RED);
+      count_pushed++;
+      if(DEBUG) printf("BUTTON: Info: %d push after %d msec.\n\r",
+                  count_pushed, millis()-last_pushed);
+      delay(250);
+    }
+    led(LED_OFF);
+    last_button_state = button;
+  }
+  if(DEBUG) printf("BUTTON: Info: Button is pushed: %d times.\n\r", 
+              count_pushed);
+  return count_pushed;
 }
 
 /****************************************************************************/
@@ -264,7 +273,7 @@ void relay_off(int index) {
 
 /****************************************************************************/
 
-bool read_DHT11(float& humidity, float& temperature) {
+bool read_DHT11(int& humidity, int& temperature) {
   dht11 DHT11;
   int state = DHT11.read(DHT11PIN);
   switch (state) {
@@ -290,8 +299,8 @@ bool read_DHT11(float& humidity, float& temperature) {
 
 void read_ACS712(float& amperage) {
   // check relays state
-  if( relay_states[1] == false 
-      && relay_states[2] == false ) {
+  if( relay_states[0] == false 
+      && relay_states[1] == false ) {
     // calibarate zero value
     calibrate_ACS712();
     amperage = 0;
@@ -301,7 +310,7 @@ void read_ACS712(float& amperage) {
   float sum = 0;
   for(int i = 0; i < ACS712_sensitivity; i++) {
     float value = analogRead(ACS712PIN);
-
+    
     if(value-ACS712_shift < -2.5) {
       value = ACS712_shift + ((value-ACS712_shift) * (-1));
     }
@@ -314,8 +323,10 @@ void read_ACS712(float& amperage) {
   float voltage = delta * 0.00488 * 1000; // 5V/1024
   amperage = voltage / 100; // 100mv = 1A
 
-  if(DEBUG) printf("ACS712: Info: sensor: %f, delta: %f, voltage: %f, amperage: %f\n\r", 
+  if(DEBUG) printf("ACS712: Info: sensor: %d, delta: %d, voltage: %d, amperage: %d\n\r", 
     sensor, delta, voltage, amperage);
+  Serial.print(amperage);
+  Serial.print(" - amperage\n\r");
 }
 
 /****************************************************************************/
@@ -328,7 +339,9 @@ void calibrate_ACS712() {
   }
   // update zero value
   ACS712_shift = sum / ACS712_sensitivity;
-  if(DEBUG) printf("ACS712: Info: Calibrated: shift is %f\n\r", ACS712_shift);
+  if(DEBUG) printf("ACS712: Info: Calibrated: shift is ", ACS712_shift);
+  Serial.print(ACS712_shift);
+  Serial.print("\n\r");
 }
 
 /****************************************************************************/

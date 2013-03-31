@@ -18,6 +18,8 @@ Mesh::Mesh( RF24& _radio ): radio(_radio), network(radio) {}
 void Mesh::begin(uint8_t _channel, uint16_t _node_id)
 {
   node_id = _node_id;
+  channel = _channel;
+  
   if( nodes.contains(node_id) )
   {
     node_address = nodes[node_id];
@@ -31,10 +33,9 @@ void Mesh::begin(uint8_t _channel, uint16_t _node_id)
     node_address = homeless;
   }
   
-  printf_P(PSTR("MESH: Info: Initializing Node: id: %u, address: %u"),
+  printf_P(PSTR("MESH: Info: Initializing Node: id: %u, address: 0%o \n\r"),
             node_id, node_address);
-  
-  network.begin(_channel, node_address);
+  network.begin(channel, node_address);
 }
 
 /****************************************************************************/
@@ -78,12 +79,15 @@ void Mesh::update()
     RF24NetworkHeader header;
     network.peek(header);
     
-    printf_P(PSTR("MESH: Info: %u, %u: Got message: %s from %u \n\r"),
-              node_id, node_address, header.type, header.from_node);
+    printf_P(PSTR("MESH: Info: %u, 0%o: Got message: %s \n\r"),
+              node_id, node_address, header.toString());
     
     // Dispatch the message to the correct handler.
     switch (header.type)
     {
+      case 'P':
+        handle_P(header);
+        break;
       case 'A':
         handle_A(header);
         break;
@@ -103,19 +107,19 @@ void Mesh::update()
   
   // Send every 'interval' ms 
   unsigned long now = millis();
-  if ( now - last_time_sent >= interval )
+  if ( now >= interval + last_time_sent )
   {
     last_time_sent = now;
     
     if(node_address == homeless) {
-      // send request to base for giving address
-      bool ok = send_A(base);
+      // send ping to base
+      bool ok = send_P(base);
       
       if(ok) {
-        printf_P(PSTR("MESH: Info: %u, %u: Address request: Send: ok\n\r"),
+        printf_P(PSTR("MESH: Info: %u, 0%o: Ping base: Send: ok \n\r"),
                   node_id, node_address);
       } else {
-        printf_P(PSTR("MESH: Info: %d, %d: Address request: Send: failed\n\r"),
+        printf_P(PSTR("MESH: Info: %u, 0%o: Ping base: Send: failed \n\r"),
                   node_id, node_address);
       }
     }
@@ -151,7 +155,7 @@ void Mesh::read(void* message)
 
 /****************************************************************************/
 
-void Mesh::handle_A(RF24NetworkHeader& header)
+void Mesh::handle_P(RF24NetworkHeader& header)
 {
   uint16_t address;
   network.read(header,&address,sizeof(address));
@@ -161,16 +165,42 @@ void Mesh::handle_A(RF24NetworkHeader& header)
   } else {
     address = get_new_address(address); 
   }
+  
+  if(header.from_node == homeless) {
+    // send next empty address to node
+    send_A(address);
+  }
+}
+
+/****************************************************************************/
+
+bool Mesh::send_P(uint16_t to_address)
+{
+  RF24NetworkHeader header(to_address, 'P');
+  printf_P(PSTR("MESH: Info: %u, 0%o: Send P, Header: %s \n\r"), 
+    node_id, node_address, header.toString());
+  return network.write(header,&to_address,sizeof(to_address));
+}
+
+/****************************************************************************/
+
+void Mesh::handle_A(RF24NetworkHeader& header)
+{
+  uint16_t address;
+  network.read(header,&address,sizeof(address));
+  
   // reinitialize node
   set_address(address);
 }
 
 /****************************************************************************/
 
-bool Mesh::send_A(uint16_t to_address)
+bool Mesh::send_A(uint16_t new_address)
 {
-  RF24NetworkHeader header(to_address, 'A');
-  return network.write(header,&to_address,sizeof(to_address));
+  RF24NetworkHeader header(homeless, 'A');
+  printf_P(PSTR("MESH: Info: %u, 0%o: Send A, Header: %s \n\r"), 
+    node_id, node_address, header.toString());
+  return network.write(header,&new_address,sizeof(new_address));
 }
 
 /****************************************************************************/
@@ -182,7 +212,7 @@ void Mesh::handle_I(RF24NetworkHeader& header)
   // add new or update existing node
   nodes[id] = header.from_node;
   
-  printf_P(PSTR("MESH: Info: %u, %u: Node is updated its map: %s"), 
+  printf_P(PSTR("MESH: Info: %u, 0%o: Node is updated its map: %s \n\r"), 
     node_id, node_address, nodes.toString());
 }
 
@@ -191,6 +221,8 @@ void Mesh::handle_I(RF24NetworkHeader& header)
 bool Mesh::send_I()
 {
   RF24NetworkHeader header(base, 'I');
+  printf_P(PSTR("MESH: Info: %u, 0%o: Send I, Header: %s \n\r"), 
+    node_id, node_address, header.toString());
   return network.write(header,&node_id,sizeof(node_id));
 }
 
@@ -199,7 +231,7 @@ bool Mesh::send_I()
 uint16_t Mesh::get_new_address(uint16_t relay_address)
 {
   // find next after relay empty address
-  bool exists;
+  bool exists = false;
   for(uint16_t address=relay_address+1; address<homeless; address++) {
     for(int index=0; index<nodes.size(); index++) {
       if( nodes.valueAt(index) == address ) {
@@ -217,18 +249,21 @@ uint16_t Mesh::get_new_address(uint16_t relay_address)
 
 void Mesh::set_address(uint16_t address)
 {
-  network.begin(channel, address);
+  node_address = address;
+  
+  printf_P(PSTR("MESH: Info: Reinitializing Node: id: %u, new address: 0%o \n\r"),
+    node_id, node_address);
+  network.begin(channel, node_address);
+  
   // send unique ID to base 
   bool ok = send_I();
-  
   if(ok) {
     // change connection state
     state_ready = true;
-
-    printf_P(PSTR("MESH: Info: %u, %u: Send unique ID to base: ok\n\r"),
+    printf_P(PSTR("MESH: Info: %u, 0%o: Send unique ID to base: ok \n\r"),
                   node_id, node_address);
   } else {
-    printf_P(PSTR("MESH: Info: %u, %u: Send unique ID to base: failed\n\r"),
+    printf_P(PSTR("MESH: Info: %u, 0%o: Send unique ID to base: failed \n\r"),
                   node_id, node_address);
     // reset
     flush_node();
@@ -246,7 +281,7 @@ void Mesh::flush_node()
   // change connection state
   state_ready = false;
   
-  printf_P(PSTR("MESH: Info: %u, %u: Node is flashed.\n\r"), node_id, node_address);
+  printf_P(PSTR("MESH: Info: %u, 0%o: Node is flashed. \n\r"), node_id, node_address);
   // reinitialize node
   network.begin(channel, homeless);
 }

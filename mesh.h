@@ -59,12 +59,22 @@ private:
   uint16_t node_address; /**< Logical node address of this unit */
   uint16_t node_id; /**< Node id of this unit */
   uint8_t channel; /**< The RF channel to operate on */
-  const static uint16_t base = 00000; /**< Base address */
-  const static uint16_t homeless = 05555; /**< homeless address is last address in the network */
+  const static uint16_t base = 00; /**< Base address */
+  const static uint16_t homeless = 05; /**< homeless address is last address in the network */
   const static uint16_t interval = 2000; /**< Delay manager in ms */
-  uint16_t last_time_sent;
+  unsigned long last_time_sent;
   bool state_ready; /**< connection state */
   
+  /**
+  * Handle message with type P, handle Ping
+  */
+  void handle_P(RF24NetworkHeader& header);
+
+  /**
+  * Send message with type P, send Ping
+  */
+  bool send_P(uint16_t to_address);
+
   /**
   * Handle message with type A, handle Address Node request
   */
@@ -73,7 +83,7 @@ private:
   /**
   * Send message with type A, send Address Node request
   */
-  bool send_A(uint16_t to_address);
+  bool send_A(uint16_t new_address);
 
   /**
   * Handle message with type I, handle Id Node request
