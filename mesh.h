@@ -15,41 +15,43 @@ class Mesh
 {
 public:
   /**
-   * Construct the network
+   * Construct the network, create network object
    *
    * @param _radio The underlying radio driver instance
    */
   Mesh( RF24& _radio );
   
   /**
-   * Bring up the network
+   * Bring up the network, configure network
    *
    * @warning Be sure to 'begin' the radio first.
    */
   void begin(uint8_t _channel, uint16_t _node_id );
   
   /**
-  * Check connection
+  * Check connection, network ready to send/recieve 
+  * payload message
   */
   bool ready(void);
 
   /**
-  * Send message to node with unique id.
+  * Send payload message to node by unique id.
   */
   bool send(const void* message, uint16_t to_id);
 
   /**
-  * Update network state.
+  * Update node, handle new messages and
+  * support internal comunication
   */
   void update(void);
 
   /**
-  * Check message box
+  * Check message box for new payload message
   */
   bool available(void);
 
   /**
-  * Read message
+  * Read available messages, get payload message
   */
   void read(void*);
 
@@ -62,54 +64,49 @@ private:
   const static uint16_t base = 00; /**< Base address */
   const static uint16_t homeless = 05; /**< homeless address is last address in the network */
   const static uint16_t interval = 2000; /**< Delay manager in ms */
-  unsigned long last_time_sent;
+  unsigned long last_time_sent; /** time's stamp when last message was sent */
   bool state_ready; /**< connection state */
-  
+
   /**
-  * Handle message with type P, handle Ping
+  * Send message with type P, send Ping request.
+  * Send ping to base.
+  */
+  bool send_P();
+
+  /**
+  * Handle message with type P, handle Ping request.
+  * Save node id to collection or given new address.
   */
   void handle_P(RF24NetworkHeader& header);
 
   /**
-  * Send message with type P, send Ping
-  */
-  bool send_P(uint16_t to_address);
-
-  /**
-  * Handle message with type A, handle Address Node request
-  */
-  void handle_A(RF24NetworkHeader& header);
-
-  /**
-  * Send message with type A, send Address Node request
+  * Send message with type A, send new Address node request.
+  * Request new address from base
   */
   bool send_A(uint16_t new_address);
 
   /**
-  * Handle message with type I, handle Id Node request
+  * Handle message with type A, handle new Address node request.
+  * Reinitialize node with new address from message.
   */
-  void handle_I(RF24NetworkHeader& header);
-
-  /**
-  * Send message with type I, send Id Node request
-  */
-  bool send_I();
+  void handle_A(RF24NetworkHeader& header);
 
   /**
   * Find empty node address
   * 
-  * @param relay_address Find iside this relay branch,
+  * @param relay_address Find inside this relay branch,
   * 	by default finding in the root
   */
   uint16_t get_new_address(uint16_t relay_address);
 
   /**
-  * Initialize new node address
+  * Reinitialize node with new address, 
+  * and send ping from new address
   */
-  void set_address(uint16_t address);
+  void set_address(uint16_t new_address);
   
   /**
-  * Reset
+  * Reset node
   */
   void flush_node();
 };
