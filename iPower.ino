@@ -39,7 +39,7 @@ uint8_t relay_states[sizeof(relay_pins)];
 // Declare ACS712 sensor analog pin
 #define ACS712PIN  A0
 // Shifting value for calibrate sensor
-float ACS712_shift = 0;
+uint64_t ACS712_shift = 0;
 // Sensor reading cycle count
 int ACS712_sensitivity = 700;
 
@@ -126,7 +126,7 @@ void create_payload() {
   read_DHT11(humidity, temperature);
   // get ACS712 sensor value
   //read_ACS712(payload.sensors[AMPERAGE]);
-  float amperage;
+  uint16_t amperage;
   read_ACS712(amperage);
   // get relays state
   //payload.controls[RELAY1] = relay_states[0];
@@ -297,7 +297,7 @@ bool read_DHT11(int& humidity, int& temperature) {
 
 /****************************************************************************/
 
-void read_ACS712(float& amperage) {
+void read_ACS712(uint16_t& amperage) {
   // check relays state
   if( relay_states[0] == false 
       && relay_states[1] == false ) {
@@ -307,9 +307,9 @@ void read_ACS712(float& amperage) {
     return;
   }
 
-  float sum = 0;
+  uint64_t sum = 0;
   for(int i = 0; i < ACS712_sensitivity; i++) {
-    float value = analogRead(ACS712PIN);
+    uint64_t value = analogRead(ACS712PIN);
     
     if(value-ACS712_shift < -2.5) {
       value = ACS712_shift + ((value-ACS712_shift) * (-1));
@@ -318,30 +318,26 @@ void read_ACS712(float& amperage) {
     delay(10);
   }
   // calculate
-  float sensor = sum / ACS712_sensitivity;
-  float delta = sensor - ACS712_shift;
+  uint64_t sensor = sum / ACS712_sensitivity;
+  uint64_t delta = sensor - ACS712_shift;
   float voltage = delta * 0.00488 * 1000; // 5V/1024
   amperage = voltage / 100; // 100mv = 1A
 
-  if(DEBUG) printf("ACS712: Info: sensor: %d, delta: %d, voltage: %d, amperage: %d\n\r", 
+  if(DEBUG) printf("ACS712: Info: sensor: %u, delta: %u, voltage: %u, amperage: %u\n\r", 
     sensor, delta, voltage, amperage);
-  Serial.print(amperage);
-  Serial.print(" - amperage\n\r");
 }
 
 /****************************************************************************/
 
 void calibrate_ACS712() {
-  float sum = 0;
+  uint64_t sum = 0;
   for(int i = 0; i < ACS712_sensitivity; i++) {
     sum = sum + analogRead(ACS712PIN);
     delay(10);
   }
   // update zero value
   ACS712_shift = sum / ACS712_sensitivity;
-  if(DEBUG) printf("ACS712: Info: Calibrated: shift is ", ACS712_shift);
-  Serial.print(ACS712_shift);
-  Serial.print("\n\r");
+  if(DEBUG) printf("ACS712: Info: Calibrated: shift is %u\n\r", ACS712_shift);
 }
 
 /****************************************************************************/
