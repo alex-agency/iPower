@@ -10,6 +10,17 @@
  *
  * This class implements an Mesh Network Layer using nRF24L01(+) radios driven
  * by RF24 and RF24Network libraries.
+ *
+ * Currently MESH is not working right!
+ * We can't send message from 05555 node to 00 base!
+ *
+ * node        -> base
+ * 01-05       -> 00
+ * 021         -> 01
+ * 051-055     -> 01-05
+ * 0551-0555   -> 051-055
+ * 05551-05555 -> 0551-0555
+ * 05555       -> 0555
  */
 class Mesh
 {
