@@ -9,8 +9,8 @@
  */
 struct Payload
 {
-	HashMap<char*,float,10> sensors;
-  	HashMap<char*,bool,10> controls;
+	CreateHashMap(sensors, char*, int, 10);
+	CreateHashMap(controls, char*, int, 10);
   	char* toString()
   	{
     	char* buffer;

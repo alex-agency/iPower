@@ -39,7 +39,7 @@ uint8_t relay_states[sizeof(relay_pins)];
 // Declare ACS712 sensor analog pin
 #define ACS712PIN  A0
 // Shifting value for calibrate sensor
-uint64_t ACS712_shift = 0;
+int ACS712_shift = 0;
 // Sensor reading cycle count
 int ACS712_sensitivity = 700;
 
@@ -120,19 +120,22 @@ void loop()
 /****************************************************************************/
 
 void create_payload() {
-  // get DHT11 sensor value
-  //read_DHT11(payload.sensors[HUMIDITY], payload.sensors[TEMPERATURE]);
-  int temperature, humidity;
+  // get DHT11 sensor values
+  int humidity, temperature;
   read_DHT11(humidity, temperature);
-  // get ACS712 sensor value
-  //read_ACS712(payload.sensors[AMPERAGE]);
-  uint16_t amperage;
-  read_ACS712(amperage);
-  // get relays state
-  //payload.controls[RELAY1] = relay_states[0];
-  //payload.controls[RELAY2] = relay_states[1];
+  payload.sensors[HUMIDITY] = humidity;
+  payload.sensors[TEMPERATURE] = temperature;
 
-  //if(DEBUG) printf("PAYLOAD: Info: Created payload: %s", payload.toString());
+  // get ACS712 sensor value
+  int amperage;
+  read_ACS712(amperage);
+  payload.sensors[AMPERAGE] = amperage;
+
+  // get relays state
+  payload.controls[RELAY1] = relay_states[0];
+  payload.controls[RELAY2] = relay_states[1];
+  
+  if(DEBUG) printf("PAYLOAD: Info: Created payload: %s", payload.toString());
 }
 
 /****************************************************************************/
@@ -297,7 +300,7 @@ bool read_DHT11(int& humidity, int& temperature) {
 
 /****************************************************************************/
 
-void read_ACS712(uint16_t& amperage) {
+void read_ACS712(int& amperage) {
   // check relays state
   if( relay_states[0] == false 
       && relay_states[1] == false ) {
@@ -309,22 +312,22 @@ void read_ACS712(uint16_t& amperage) {
 
   uint64_t sum = 0;
   for(int i = 0; i < ACS712_sensitivity; i++) {
-    uint64_t value = analogRead(ACS712PIN);
-    
-    if(value-ACS712_shift < -2.5) {
-      value = ACS712_shift + ((value-ACS712_shift) * (-1));
-    }
+    int value = analogRead(ACS712PIN);
+    // ????
+    //if(value-ACS712_shift < -2.5) {
+    //  value = ACS712_shift + ((value-ACS712_shift) * (-1));
+    //}
     sum = sum + value;
     delay(10);
   }
   // calculate
-  uint64_t sensor = sum / ACS712_sensitivity;
-  uint64_t delta = sensor - ACS712_shift;
-  float voltage = delta * 0.00488 * 1000; // 5V/1024
+  int sensor = sum / ACS712_sensitivity;
+  int delta = sensor - ACS712_shift;
+  float voltage = delta * 4.88; // 5V/1024*1000
   amperage = voltage / 100; // 100mv = 1A
 
-  if(DEBUG) printf("ACS712: Info: sensor: %u, delta: %u, voltage: %u, amperage: %u\n\r", 
-    sensor, delta, voltage, amperage);
+  if(DEBUG) printf("ACS712: Info: sensor: %d, delta: %d, voltage: %f, amperage: %d \n\r", 
+              sensor, delta, voltage, amperage);
 }
 
 /****************************************************************************/
@@ -337,7 +340,7 @@ void calibrate_ACS712() {
   }
   // update zero value
   ACS712_shift = sum / ACS712_sensitivity;
-  if(DEBUG) printf("ACS712: Info: Calibrated: shift is %u\n\r", ACS712_shift);
+  if(DEBUG) printf("ACS712: Info: Calibrated: shift is %d \n\r", ACS712_shift);
 }
 
 /****************************************************************************/
