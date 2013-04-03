@@ -39,9 +39,7 @@ uint8_t relay_states[sizeof(relay_pins)];
 // Declare ACS712 sensor analog pin
 #define ACS712PIN  A0
 // Shifting value for calibrate sensor
-int ACS712_shift = 0;
-// Sensor reading cycle count
-int ACS712_sensitivity = 500;
+int ACS712_shift = 512;
 
 // Declare payload
 Payload payload;
@@ -305,46 +303,37 @@ bool read_DHT11(int& humidity, int& temperature) {
 /****************************************************************************/
 
 void read_ACS712(int& amperage) {
+  // reading sensitivity
+  int sensitivity = 500;
   // check relays state
   if( relay_states[0] == false 
       && relay_states[1] == false ) {
-    // calibarate zero value
-    calibrate_ACS712();
     amperage = 0;
+    // calibarate zero value
+    ACS712_shift = analogReadAccuracy(ACS712PIN, sensitivity);
+    if(DEBUG) printf("ACS712: Info: Calibrated: shift is %d \n\r", ACS712_shift);
     return;
   }
-
-  uint64_t sum = 0;
-  for(int i = 0; i < ACS712_sensitivity; i++) {
-    int value = analogRead(ACS712PIN);
-    // ????
-    //if(value-ACS712_shift < -2.5) {
-    //  value = ACS712_shift + ((value-ACS712_shift) * (-1));
-    //}
-    sum = sum + value;
-    delay(5);
-  }
+  // read sensor
+  int sensor = analogReadAccuracy(ACS712PIN, sensitivity);
   // calculate
-  int sensor = sum / ACS712_sensitivity;
+  // 512 = 0A = 2500mV, shift = 512
+  // 100mV/(2500mV/512) = 20.48mA = 513
   int delta = sensor - ACS712_shift;
-  int voltage = delta * 4.88; // 5V/1024*1000
-  amperage = voltage / 100; // 100mv = 1A
-
-  if(DEBUG) printf("ACS712: Info: sensor: %d, delta: %d, voltage: %d, amperage: %d \n\r", 
-              sensor, delta, voltage, amperage);
+  int amperage = delta * 20.48;
+  
+  if(DEBUG) printf("ACS712: Info: sensor: %d, delta: %d, amperage: %d \n\r", 
+              sensor, delta, amperage);
 }
 
 /****************************************************************************/
 
-void calibrate_ACS712() {
+int analogReadAccuracy(int pin, int sensitivity) {
   uint64_t sum = 0;
-  for(int i = 0; i < ACS712_sensitivity; i++) {
-    sum = sum + analogRead(ACS712PIN);
+  for(int i = 0; i < sensitivity; i++) {
+    sum = sum + analogRead(pin);
     delay(5);
   }
-  // update zero value
-  ACS712_shift = sum / ACS712_sensitivity;
-  if(DEBUG) printf("ACS712: Info: Calibrated: shift is %d \n\r", ACS712_shift);
 }
 
 /****************************************************************************/
