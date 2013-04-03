@@ -41,24 +41,10 @@ uint8_t relay_states[sizeof(relay_pins)];
 // Shifting value for calibrate sensor
 int ACS712_shift = 0;
 // Sensor reading cycle count
-int ACS712_sensitivity = 700;
+int ACS712_sensitivity = 500;
 
 // Declare payload
-
-struct Payload
-{
-  CreateHashMap(sensors, char*, int, 10);
-  CreateHashMap(controls, char*, int, 10);
-  char* toString()
-  	{
-    	char* buffer;
-  		sprintf(buffer, "Sensors: %s, Controls: %s", 
-  			sensors.toString(), controls.toString());
-  		return buffer;
-  	};
-};
 Payload payload;
-
 // Declare payload keys
 #define HUMIDITY  "humidity"
 #define TEMPERATURE  "temperature"
@@ -107,15 +93,15 @@ void loop()
     mesh.read(&payload);
     if(DEBUG) printf("PAYLOAD: Info: Got payload: %s", payload.toString());
 
-    //if( payload.controls[RELAY1] )
-    //  relay_on(0);
-    //else
-    //  relay_off(0);
+    if( payload.controls[RELAY1] )
+      relay_on(0);
+    else
+      relay_off(0);
     
-    //if( payload.controls[RELAY2] )
-    //  relay_on(1);
-    //else
-    //  relay_off(1);
+    if( payload.controls[RELAY2] )
+      relay_on(1);
+    else
+      relay_off(1);
   }
   
   // connection ready
@@ -140,19 +126,20 @@ void create_payload() {
   payload.sensors[HUMIDITY] = humidity;
   payload.sensors[TEMPERATURE] = temperature;
 
+  /////////////////////
   printf("PAYLOAD: %s ", payload.sensors.toString());
-
+  /////////////////////
 
   // get ACS712 sensor value
   int amperage;
   read_ACS712(amperage);
-  //payload.sensors[AMPERAGE] = amperage;
+  payload.sensors[AMPERAGE] = amperage;
 
   // get relays state
-  //payload.controls[RELAY1] = relay_states[0];
-  //payload.controls[RELAY2] = relay_states[1];
+  payload.controls[RELAY1] = relay_states[0];
+  payload.controls[RELAY2] = relay_states[1];
   
-  //if(DEBUG) printf("PAYLOAD: Info: Created payload: %s", payload.toString());
+  if(DEBUG) printf("PAYLOAD: Info: Created payload: %s", payload.toString());
 }
 
 /****************************************************************************/
@@ -335,7 +322,7 @@ void read_ACS712(int& amperage) {
     //  value = ACS712_shift + ((value-ACS712_shift) * (-1));
     //}
     sum = sum + value;
-    delay(10);
+    delay(5);
   }
   // calculate
   int sensor = sum / ACS712_sensitivity;
@@ -353,7 +340,7 @@ void calibrate_ACS712() {
   uint64_t sum = 0;
   for(int i = 0; i < ACS712_sensitivity; i++) {
     sum = sum + analogRead(ACS712PIN);
-    delay(10);
+    delay(5);
   }
   // update zero value
   ACS712_shift = sum / ACS712_sensitivity;
