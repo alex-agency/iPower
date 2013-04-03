@@ -34,6 +34,8 @@ const uint16_t base_id = 00;
 // Declare state map keys
 #define LED_RED  "red led"
 #define LED_GREEN  "green led"
+// Declare state value
+#define LED_OFF  0
 
 // Declare relays digital pins
 #define RELAY1PIN  7
@@ -54,7 +56,7 @@ const uint16_t base_id = 00;
 // Declare ACS712 sensor analog pin
 #define ACS712PIN  A0
 // Shifting value for calibrate sensor
-int ACS712_shift = 512;
+uint16_t ACS712_shift = 512;
 // Declare state map key
 #define AMPERAGE  "amperage"
 
@@ -62,7 +64,7 @@ int ACS712_shift = 512;
 Payload payload;
 
 // Declare state map
-CreateHashMap(states, char*, int, 10);
+CreateHashMap(states, char*, int, 8);
 
 // Debug info.
 const bool DEBUG = true;
@@ -107,7 +109,10 @@ void loop()
   // new message available
   while( mesh.available() ) {
     mesh.read(&payload);
-    if(DEBUG) printf("PAYLOAD: Info: Got payload: %s", payload.toString());
+    if(DEBUG) {
+      printf("PAYLOAD: Info: Got payload: ");
+      payload.toString();
+    }
 
     if( payload.controls[RELAY_1] )
       relay(RELAY_1, RELAY_ON);
@@ -122,11 +127,12 @@ void loop()
   
   // connection ready
   if( mesh.ready() ) {
-    //led(LED_GREEN);
+    led(LED_RED);
+    
     // create message
     create_payload();
     // send message to base
-    //mesh.send(&payload, base_id);
+    mesh.send(&payload, base_id);
   }
 
   // check button
@@ -137,67 +143,50 @@ void loop()
 
 void create_payload() {
   // get DHT11 sensor values
-  int humidity, temperature;
-  read_DHT11(humidity, temperature);
-  payload.sensors[HUMIDITY] = humidity;
-  payload.sensors[TEMPERATURE] = temperature;
-
-  /////////////////////
-  printf("PAYLOAD: %s ", payload.sensors.toString());
-  /////////////////////
-
-  // get ACS712 sensor value
-  int amperage;
-  read_ACS712(amperage);
-  payload.sensors[AMPERAGE] = amperage;
-
-  // get relays state
-  payload.controls[RELAY1] = relay_states[0];
-  payload.controls[RELAY2] = relay_states[1];
+  read_DHT11();
+  payload.sensors[HUMIDITY] = states[HUMIDITY];
+  payload.sensors[TEMPERATURE] = states[TEMPERATURE];
   
-  if(DEBUG) printf("PAYLOAD: Info: Created payload: %s", payload.toString());
+  // get ACS712 sensor value
+  read_ACS712();
+  payload.sensors[AMPERAGE] = states[AMPERAGE];
+  
+  // get relays state
+  payload.controls[RELAY_1] = states[RELAY_1];
+  payload.controls[RELAY_2] = states[RELAY_2];
+  
+  if(DEBUG) {
+    printf("PAYLOAD: Info: Created payload: ");
+    payload.toString();
+    printf("\n\r");
+  }
 }
 
 /****************************************************************************/
 
-void led(char* led, bool blink) {
-  int delay = 200;
-  if(blink && millis() > delay+last_led_blink) {
-    // turn off
-    pin = 0;
-  }
+void led(char* led) {
+  // clear all states
+  states[LED_RED] = false;
+  states[LED_GREEN] = false;
 
-  if()
-
-
-  switch (pin) {
+  if(led == LED_RED) {
     // enable red led
-    case LED_RED:
-      digitalWrite(LED_RED, HIGH);
-      digitalWrite(LED_GREEN, LOW);
-      return;
+    digitalWrite(LEDREDPIN, HIGH);
+    digitalWrite(LEDGREENPIN, LOW);
+    // save state
+    states[LED_RED] = true;
+
+  } else if(led == LED_GREEN) {
     // enable green led
-    case LED_GREEN:
-      digitalWrite(LED_GREEN, HIGH);
-      digitalWrite(LED_RED, LOW);
-      return;
-    // turn off leds
-    default: 
-      digitalWrite(LED_GREEN, LOW);
-      digitalWrite(LED_RED, LOW);
-      return;
-  }
-}
-
-/****************************************************************************/
-
-void led_blink(int pin, int count) {
-  led(LED_OFF);
-  for(int i=0; i<count; i++) {
-    delay(300);
-    led(pin);
-    delay(150);
-    led(LED_OFF);
+    digitalWrite(LEDGREENPIN, HIGH);
+    digitalWrite(LEDREDPIN, LOW);
+    // save state
+    states[LED_GREEN] = true;
+    
+  } else {
+    // disable leds
+    digitalWrite(LEDREDPIN, LOW);
+    digitalWrite(LEDGREENPIN, LOW);
   }
 }
 
@@ -208,17 +197,18 @@ void handle_button() {
     case 1:
       led(LED_RED);
       // turning ON relay #1
-      relay_on(0);
+      relay(RELAY_1, RELAY_ON);
       return;
     case 2:
       led(LED_RED);
       // turning ON relay #2
-      relay_on(1);
+      relay(RELAY_2, RELAY_ON);
       return;
     case 3:
       // turning OFF relay #1 and #2
-      relay_off(0);
-      relay_off(1);
+      relay(RELAY_1, RELAY_OFF);
+      relay(RELAY_2, RELAY_OFF);
+      led(LED_OFF);
       return;
     default:
       return;
@@ -277,22 +267,22 @@ int read_button() {
 
 /****************************************************************************/
 
-relay(char* relay, int state) {
+void relay(char* relay, int state) {
   // turn on/off
-  if(states[relay] == RELAY1) {
+  if(relay == RELAY_1) {
     digitalWrite(RELAY1PIN, state);
-  } else if(states[relay] == RELAY2) {
+  } else if(relay == RELAY_2) {
     digitalWrite(RELAY2PIN, state);
   }
-  // save state
-  states[relay] = state;
-
+  
   if(state == RELAY_ON) {
-    // power is on
+    // save states
+    states[relay] = true;
     states[POWER] = true;
     if(DEBUG) printf("RELAY: Info: %s is enabled.\n\r", relay);
   } else if(state == RELAY_OFF) {
-    // power is off
+    // save states
+    states[relay] = false;
     if(states[RELAY_1] == states[RELAY_2])
       states[POWER] = false;
     if(DEBUG) printf("RELAY: Info: %s is disabled.\n\r", relay);
@@ -308,8 +298,8 @@ bool read_DHT11() {
     case DHTLIB_OK:
       states[HUMIDITY] = DHT11.humidity;
       states[TEMPERATURE] = DHT11.temperature;
-      if(DEBUG) printf("DHT11: Info: Sensor values: humidity: %d, temperature: %d\n\r", 
-                          humidity, temperature);
+      if(DEBUG) printf("DHT11: Info: Sensor values: humidity: %d, temperature: %d.\n\r", 
+                          states[HUMIDITY], states[TEMPERATURE]);
       return true;
     case DHTLIB_ERROR_CHECKSUM:  
       printf("DHT11: Error: Checksum test failed!: The data may be incorrect!\n\r");
@@ -333,30 +323,31 @@ bool read_ACS712() {
     states[AMPERAGE] = 0;
     // calibarate zero value
     ACS712_shift = analogReadAccuracy(ACS712PIN, sensitivity);
-    if(DEBUG) printf("ACS712: Info: Calibrated: shift is %d \n\r", ACS712_shift);
+    if(DEBUG) printf("ACS712: Info: Calibrated: shift is %u.\n\r", ACS712_shift);
     return false;
   }
   // read sensor
-  int sensor = analogReadAccuracy(ACS712PIN, sensitivity);
+  uint16_t sensor = analogReadAccuracy(ACS712PIN, sensitivity);
   // calculate
   // 512 = 0A = 2500mV, shift = 512
   // 100mV/(2500mV/512) = 20.48mA = 513
   int delta = sensor - ACS712_shift;
   states[AMPERAGE] = delta * 20.48;
 
-  if(DEBUG) printf("ACS712: Info: sensor: %d, delta: %d, amperage: %d \n\r", 
-              sensor, delta, amperage);
+  if(DEBUG) printf("ACS712: Info: sensor: %u, delta: %d, amperage: %d.\n\r", 
+              sensor, delta, states[AMPERAGE]);
   return true;
 }
 
 /****************************************************************************/
 
-int analogReadAccuracy(int pin, int sensitivity) {
+uint16_t analogReadAccuracy(int pin, int sensitivity) {
   uint64_t sum = 0;
   for(int i = 0; i < sensitivity; i++) {
     sum = sum + analogRead(pin);
     delay(5);
   }
+  return sum / sensitivity;
 }
 
 /****************************************************************************/

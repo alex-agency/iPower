@@ -180,10 +180,19 @@ void Mesh::handle_P(RF24NetworkHeader& header)
 
   uint16_t id;
   network.read(header,&id,sizeof(id));
+  
+  if(nodes[id].exsits()) {
+    
+  }
+  
   // add new or update existing node
   nodes[id] = header.from_node;
-  if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Node is updated its map: %s \n\r"), 
-              node_id, node_address, nodes.toString());
+  if(DEBUG) {
+    printf_P(PSTR("MESH: Info: %u, 0%o: Node is updated its map: "), 
+              node_id, node_address);
+    nodes.toString();
+    printf_P(PSTR("\n\r"));
+  }
 }
 
 /****************************************************************************/
@@ -191,8 +200,8 @@ void Mesh::handle_P(RF24NetworkHeader& header)
 bool Mesh::send_A(uint16_t new_address)
 {
   RF24NetworkHeader header(homeless, 'A');
-  if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Send new address: %s \n\r"), 
-              node_id, node_address, header.toString());
+  if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Send new address 0%o: %s \n\r"), 
+              node_id, node_address, new_address, header.toString());
   return network.write(header,&new_address,sizeof(new_address));
 }
 
@@ -202,6 +211,9 @@ void Mesh::handle_A(RF24NetworkHeader& header)
 {
   uint16_t new_address;
   network.read(header,&new_address,sizeof(new_address));
+  // add new or update existing node
+  nodes[id] = header.from_node;
+  
   // reinitialize node
   set_address(new_address);
 }
@@ -242,7 +254,7 @@ void Mesh::set_address(uint16_t address)
     // change connection state
     state_ready = true;
     if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Ping: Send: ok \n\r"),
-                node_id, node_address);
+                node_id, node_address);    
   } else {
     if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Ping: Send: failed! \n\r"),
                 node_id, node_address);
