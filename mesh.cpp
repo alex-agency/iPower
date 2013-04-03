@@ -201,7 +201,7 @@ bool Mesh::send_A(uint16_t new_address)
 void Mesh::handle_A(RF24NetworkHeader& header)
 {
   uint16_t new_address;
-  network.read(header,&new_address,sizeof(address));
+  network.read(header,&new_address,sizeof(new_address));
   // reinitialize node
   set_address(new_address);
 }

@@ -229,15 +229,18 @@ class HashMap
       int size = currentIndex;
       if(size == 0)
         return "{}";
-
-      char* buffer;
-      sprintf(buffer, "{");
+      
+      char buffer[40];
+      sprintf (buffer, "%d plus  is ", size);
+      
+      
       for(int i=0; i<size; i++) {
-        sprintf(buffer, "%s=%d", keys[i], values[i]);
-        if(i<size-1)
-          sprintf(buffer, ", ");
-        else
-          sprintf(buffer, "}");
+        //buffer = buffer+String(keys[i])+"="+String(values[i]);
+        printf_P(PSTR("HashMap: %s=%d"), keys[i], values[i]); 
+        //if(i<size-1)
+          //buffer = buffer+", ";
+        //else
+          //buffer = buffer+"}";
       }
       return buffer;
     }

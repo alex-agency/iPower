@@ -6,7 +6,7 @@
 #include "printf.h"
 #include "dht11.h"
 #include "HashMap.h"
-#include "Payload.h"
+//#include "Payload.h"
 
 // Set up nRF24L01 radio on SPI bus pin CE and CS
 RF24 radio(9,10);
@@ -44,7 +44,21 @@ int ACS712_shift = 0;
 int ACS712_sensitivity = 700;
 
 // Declare payload
+
+struct Payload
+{
+  CreateHashMap(sensors, char*, int, 10);
+  CreateHashMap(controls, char*, int, 10);
+  char* toString()
+  	{
+    	char* buffer;
+  		sprintf(buffer, "Sensors: %s, Controls: %s", 
+  			sensors.toString(), controls.toString());
+  		return buffer;
+  	};
+};
 Payload payload;
+
 // Declare payload keys
 #define HUMIDITY  "humidity"
 #define TEMPERATURE  "temperature"
@@ -93,15 +107,15 @@ void loop()
     mesh.read(&payload);
     if(DEBUG) printf("PAYLOAD: Info: Got payload: %s", payload.toString());
 
-    if( payload.controls[RELAY1] )
-      relay_on(0);
-    else
-      relay_off(0);
+    //if( payload.controls[RELAY1] )
+    //  relay_on(0);
+    //else
+    //  relay_off(0);
     
-    if( payload.controls[RELAY2] )
-      relay_on(1);
-    else
-      relay_off(1);
+    //if( payload.controls[RELAY2] )
+    //  relay_on(1);
+    //else
+    //  relay_off(1);
   }
   
   // connection ready
@@ -126,16 +140,19 @@ void create_payload() {
   payload.sensors[HUMIDITY] = humidity;
   payload.sensors[TEMPERATURE] = temperature;
 
+  printf("PAYLOAD: %s ", payload.sensors.toString());
+
+
   // get ACS712 sensor value
   int amperage;
   read_ACS712(amperage);
-  payload.sensors[AMPERAGE] = amperage;
+  //payload.sensors[AMPERAGE] = amperage;
 
   // get relays state
-  payload.controls[RELAY1] = relay_states[0];
-  payload.controls[RELAY2] = relay_states[1];
+  //payload.controls[RELAY1] = relay_states[0];
+  //payload.controls[RELAY2] = relay_states[1];
   
-  if(DEBUG) printf("PAYLOAD: Info: Created payload: %s", payload.toString());
+  //if(DEBUG) printf("PAYLOAD: Info: Created payload: %s", payload.toString());
 }
 
 /****************************************************************************/
@@ -323,10 +340,10 @@ void read_ACS712(int& amperage) {
   // calculate
   int sensor = sum / ACS712_sensitivity;
   int delta = sensor - ACS712_shift;
-  float voltage = delta * 4.88; // 5V/1024*1000
+  int voltage = delta * 4.88; // 5V/1024*1000
   amperage = voltage / 100; // 100mv = 1A
 
-  if(DEBUG) printf("ACS712: Info: sensor: %d, delta: %d, voltage: %f, amperage: %d \n\r", 
+  if(DEBUG) printf("ACS712: Info: sensor: %d, delta: %d, voltage: %d, amperage: %d \n\r", 
               sensor, delta, voltage, amperage);
 }
 
