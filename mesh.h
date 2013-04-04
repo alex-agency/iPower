@@ -11,16 +11,35 @@
  * This class implements an Mesh Network Layer using nRF24L01(+) radios driven
  * by RF24 and RF24Network libraries.
  *
- * Currently MESH is not working right!
+ * Currently MESH is not working correct!
  * We can't send message from 05555 node to 00 base!
+ * Currently this network could have only 4 leaf node. (01-04)
  *
- * node        -> base
+ * leaf node   -> base node
  * 01-05       -> 00
  * 021         -> 01
  * 051-055     -> 01-05
  * 0551-0555   -> 051-055
  * 05551-05555 -> 0551-0555
  * 05555       -> 0555
+ * 
+ * 1. Base node after start has base address (00) and waiting for messages.
+ * 2. Leaf node after start has homeless address (05) which is last address 
+ *    in the network.
+ * 3. Homeless node sending ping to base node (message with type P) 
+ *    every time interval.
+ * 4. When base is recieved ping from homeless node then base sent to
+ *    this node message with new address (type A) which is not used 
+ *    by any other node.
+ * 5. The homeless node applying new address from recived message (with type A).
+ * 6. After applying address leaf node send to base ping with its unique id.
+ * 7. If leaf node was sent ping corretly it means this leaf node is ready.
+ * 8. When base is recieved ping from leaf node then base getting uiniqe id from 
+ *    ping message and putting it to nodes map. Where key is unique id and value
+ *    is address of this leaf.
+ * 9. When leaf node has ready state it can send payload message to base.
+ * 10.If leaf node can't send correctly payload message it should reset its address.
+ *   
  */
 class Mesh
 {
@@ -119,6 +138,6 @@ private:
   /**
   * Reset node
   */
-  void flush_node();
+  void reset_node();
 };
 #endif // __MESH_H__

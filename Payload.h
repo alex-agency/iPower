@@ -9,14 +9,14 @@
  */
 struct Payload
 {
-  CreateHashMap(sensors, char*, int, 10);
-  CreateHashMap(controls, char*, int, 10);
-  const void toString() const
+  CreateHashMap(sensors, char*, int, 3);
+  CreateHashMap(controls, char*, int, 2);
+  const void print() const
   {
     printf_P(PSTR("Sensors: "));
-    sensors.toString();
+    sensors.print();
     printf_P(PSTR(", Controls: "));
-    controls.toString();
+    controls.print();
   };
 };
 

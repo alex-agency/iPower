@@ -224,7 +224,7 @@ class HashMap
       nil = nullv;
     }
 
-    const void toString() const
+    const void print() const
     {
       int size = currentIndex;
       if(size == 0) {

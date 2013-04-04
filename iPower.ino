@@ -67,7 +67,7 @@ Payload payload;
 CreateHashMap(states, char*, int, 8);
 
 // Debug info.
-const bool DEBUG = true;
+const bool DEBUG = false;
 
 //
 // Setup
@@ -111,7 +111,8 @@ void loop()
     mesh.read(&payload);
     if(DEBUG) {
       printf("PAYLOAD: Info: Got payload: ");
-      payload.toString();
+      payload.print();
+      printf("\n\r");
     }
 
     if( payload.controls[RELAY_1] )
@@ -127,10 +128,9 @@ void loop()
   
   // connection ready
   if( mesh.ready() ) {
-    led(LED_RED);
-    
-    // create message
-    create_payload();
+    led(LED_GREEN);
+    // fill payload message
+    charge_payload();
     // send message to base
     mesh.send(&payload, base_id);
   }
@@ -141,7 +141,7 @@ void loop()
 
 /****************************************************************************/
 
-void create_payload() {
+void charge_payload() {
   // get DHT11 sensor values
   read_DHT11();
   payload.sensors[HUMIDITY] = states[HUMIDITY];
@@ -156,8 +156,8 @@ void create_payload() {
   payload.controls[RELAY_2] = states[RELAY_2];
   
   if(DEBUG) {
-    printf("PAYLOAD: Info: Created payload: ");
-    payload.toString();
+    printf("PAYLOAD: Info: New payload: ");
+    payload.print();
     printf("\n\r");
   }
 }
@@ -271,21 +271,22 @@ void relay(char* relay, int state) {
   // turn on/off
   if(relay == RELAY_1) {
     digitalWrite(RELAY1PIN, state);
+    if(DEBUG) printf("RELAY: Info: %s is enabled.\n\r", relay);
+
   } else if(relay == RELAY_2) {
     digitalWrite(RELAY2PIN, state);
+    if(DEBUG) printf("RELAY: Info: %s is disabled.\n\r", relay);
   }
-  
+  // save states
   if(state == RELAY_ON) {
-    // save states
     states[relay] = true;
     states[POWER] = true;
-    if(DEBUG) printf("RELAY: Info: %s is enabled.\n\r", relay);
+
   } else if(state == RELAY_OFF) {
-    // save states
     states[relay] = false;
+
     if(states[RELAY_1] == states[RELAY_2])
       states[POWER] = false;
-    if(DEBUG) printf("RELAY: Info: %s is disabled.\n\r", relay);
   }
 }
 
@@ -317,13 +318,13 @@ bool read_DHT11() {
 
 bool read_ACS712() {
   // reading sensitivity
-  int sensitivity = 500;
+  int sensitivity = 200;
   // check relays state
   if(states[POWER] == false) {
     states[AMPERAGE] = 0;
     // calibarate zero value
     ACS712_shift = analogReadAccuracy(ACS712PIN, sensitivity);
-    if(DEBUG) printf("ACS712: Info: Calibrated: shift is %u.\n\r", ACS712_shift);
+    if(DEBUG) printf("ACS712: Info: Calibrated: Shift is %u.\n\r", ACS712_shift);
     return false;
   }
   // read sensor
@@ -334,7 +335,7 @@ bool read_ACS712() {
   int delta = sensor - ACS712_shift;
   states[AMPERAGE] = delta * 20.48;
 
-  if(DEBUG) printf("ACS712: Info: sensor: %u, delta: %d, amperage: %d.\n\r", 
+  if(DEBUG) printf("ACS712: Info: Sensor: %u, Delta: %d, Amperage: %d.\n\r", 
               sensor, delta, states[AMPERAGE]);
   return true;
 }

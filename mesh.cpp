@@ -3,14 +3,14 @@
 #include "HashMap.h"
 
 // Debug info
-const bool DEBUG = true;
+const bool DEBUG = false;
 
 /**
  * Nodes 
  * 
- * HashMap that pairs id to address and can hold 10 pairs
+ * HashMap that pairs id to address and can hold number pairs
  */
-CreateHashMap(nodes, uint16_t, uint16_t, 10);
+CreateHashMap(nodes, uint16_t, uint16_t, 5);
 
 /****************************************************************************/
 
@@ -23,24 +23,17 @@ void Mesh::begin(uint8_t _channel, uint16_t _node_id)
   // save settings
   node_id = _node_id;
   channel = _channel;
-  // check if we already know this node 
-  if( nodes.contains(node_id) )
-  {
-    node_address = nodes[node_id];
-  } 
-  // it could be base node
-  else if( node_id == base ) 
-  {
+  // is it base node?
+  if( node_id == base ) {
     node_address = base;
   }
-  // otherwise it will homeless
-  else 
-  {
+  // otherwise it is homeless
+  else {
     node_address = homeless;
   }
-
   if(DEBUG) printf_P(PSTR("MESH: Info: Initializing Node: id: %u, address: 0%o \n\r"),
               node_id, node_address);
+  // set address
   network.begin(channel, node_address);
 }
 
@@ -71,8 +64,7 @@ bool Mesh::send(const void* message, uint16_t to_id)
     return false;
   // reset node if it can't send
   } else {
-    // reset
-    flush_node();
+    reset_node();
     return false;
   }
 }
@@ -115,7 +107,7 @@ void Mesh::update()
   if ( now >= interval + last_time_sent )
   {
     last_time_sent = now;
-    // send ping if our node is homeless
+    // if homeless send ping to base
     if(node_address == homeless) {
       bool ok = send_P();
       if(ok) {
@@ -180,17 +172,12 @@ void Mesh::handle_P(RF24NetworkHeader& header)
 
   uint16_t id;
   network.read(header,&id,sizeof(id));
-  
-  if(nodes[id].exsits()) {
-    
-  }
-  
   // add new or update existing node
   nodes[id] = header.from_node;
   if(DEBUG) {
     printf_P(PSTR("MESH: Info: %u, 0%o: Node is updated its map: "), 
               node_id, node_address);
-    nodes.toString();
+    nodes.print();
     printf_P(PSTR("\n\r"));
   }
 }
@@ -211,20 +198,17 @@ void Mesh::handle_A(RF24NetworkHeader& header)
 {
   uint16_t new_address;
   network.read(header,&new_address,sizeof(new_address));
-  // add new or update existing node
-  nodes[id] = header.from_node;
-  
   // reinitialize node
   set_address(new_address);
 }
 
 /****************************************************************************/
 
-uint16_t Mesh::get_new_address(uint16_t relay_address)
+uint16_t Mesh::get_new_address(uint16_t relay)
 {
   // find next after relay empty address
   bool exists = false;
-  for(uint16_t address=relay_address+1; address<homeless; address++) {
+  for(uint16_t address=relay+1; address<homeless; address++) {
     for(int index=0; index<nodes.size(); index++) {
       if( nodes.valueAt(index) == address ) {
          exists = true;
@@ -258,14 +242,14 @@ void Mesh::set_address(uint16_t address)
   } else {
     if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Ping: Send: failed! \n\r"),
                 node_id, node_address);
-    // reset node
-    flush_node();
+    // reset state
+    reset_node();
   }
 }
 
 /****************************************************************************/
 
-void Mesh::flush_node()
+void Mesh::reset_node()
 { 
   // clear knowing nodes
   for(int index=0; index<nodes.size(); index++) {
