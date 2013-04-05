@@ -3,7 +3,7 @@
 #include "HashMap.h"
 
 // Debug info
-const bool DEBUG = false;
+const bool DEBUG = true;
 
 /**
  * Nodes 
@@ -48,13 +48,16 @@ bool Mesh::ready()
 
 bool Mesh::send(const void* message, uint16_t to_id)
 {
-  if( nodes.contains(to_id) == false ) {
+  if(to_id != base && nodes.contains(to_id) == false) {
     // we should know about this node
     return false;
   }
   // get destination address
   uint16_t to_address = nodes[to_id];
   RF24NetworkHeader header(to_address, 'M');
+  
+  if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Send payload: %s \n\r"), 
+              node_id, node_address, header.toString());
   
   bool ok = network.write(header,&message,sizeof(message));
   if(ok) {
@@ -77,7 +80,7 @@ void Mesh::update()
   network.update();
   
   // Is there anything ready?
-  while ( network.available() ) {
+  if ( network.available() ) {
     RF24NetworkHeader header;
     network.peek(header);
 
@@ -140,11 +143,15 @@ bool Mesh::available()
 
 void Mesh::read(void* message)
 {
-  RF24NetworkHeader header;
-  network.peek(header);
+
+    RF24NetworkHeader header;
+    network.peek(header);
   
-  if(header.type == 'M') {
-    network.read(header,&message,sizeof(unsigned long));
+    if(DEBUG) printf_P(PSTR("MESH: Info: Message: %s \n\r"), header.toString());
+  
+    if(header.type == 'M') {
+          if(DEBUG) printf_P(PSTR("MESH: Info: Message: Reading \n\r"));
+          network.read(header,&message,sizeof(unsigned long));
   }
 }
 
@@ -162,6 +169,9 @@ bool Mesh::send_P()
 
 void Mesh::handle_P(RF24NetworkHeader& header)
 {
+  uint16_t id;
+  network.read(header,&id,sizeof(id));
+  
   if(header.from_node == homeless) {
     // find next empty address
     uint16_t new_address = get_new_address(base);
@@ -169,9 +179,6 @@ void Mesh::handle_P(RF24NetworkHeader& header)
     send_A(new_address);
     return;
   }
-
-  uint16_t id;
-  network.read(header,&id,sizeof(id));
   // add new or update existing node
   nodes[id] = header.from_node;
   if(DEBUG) {

@@ -233,7 +233,7 @@ class HashMap
       }
       printf_P(PSTR("{"));
       for(int i=0; i<size; i++) {
-        printf_P(PSTR("%s=%d"), keys[i], values[i]);
+        printf_P(PSTR("%d=%d"), keys[i], values[i]);
         if(i<size-1)
           printf_P(PSTR(", "));
         else

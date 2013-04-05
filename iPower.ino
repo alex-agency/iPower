@@ -67,7 +67,7 @@ Payload payload;
 CreateHashMap(states, char*, int, 8);
 
 // Debug info.
-const bool DEBUG = false;
+const bool DEBUG = true;
 
 //
 // Setup
@@ -133,6 +133,7 @@ void loop()
     charge_payload();
     // send message to base
     mesh.send(&payload, base_id);
+    delay(4000);
   }
 
   // check button
