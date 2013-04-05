@@ -7,6 +7,7 @@
 #include "dht11.h"
 #include "HashMap.h"
 #include "Payload.h"
+#include "acs712.h"
 
 // Declare SPI bus pins
 #define CE_PIN  9
@@ -165,34 +166,6 @@ void charge_payload() {
 
 /****************************************************************************/
 
-void led(char* led) {
-  // clear all states
-  states[LED_RED] = false;
-  states[LED_GREEN] = false;
-
-  if(led == LED_RED) {
-    // enable red led
-    digitalWrite(LEDREDPIN, HIGH);
-    digitalWrite(LEDGREENPIN, LOW);
-    // save state
-    states[LED_RED] = true;
-
-  } else if(led == LED_GREEN) {
-    // enable green led
-    digitalWrite(LEDGREENPIN, HIGH);
-    digitalWrite(LEDREDPIN, LOW);
-    // save state
-    states[LED_GREEN] = true;
-    
-  } else {
-    // disable leds
-    digitalWrite(LEDREDPIN, LOW);
-    digitalWrite(LEDGREENPIN, LOW);
-  }
-}
-
-/****************************************************************************/
-
 void handle_button() {
   switch ( read_button() ) {
     case 1:
@@ -213,81 +186,6 @@ void handle_button() {
       return;
     default:
       return;
-  }
-}
-
-/****************************************************************************/
-
-int read_button() {
-  // 1: exit if button released
-  if(digitalRead(BUTTONPIN) == HIGH) {
-    return 0;
-  }
-  // 2: exit if first push shorter than 1 sec
-  led(LED_GREEN);
-  delay(1000);
-  if(digitalRead(BUTTONPIN) == HIGH) {
-    // skip if it pushed by mistake
-    led(LED_OFF);
-    printf("BUTTON: Error: Incorrect push! It's too short.\n\r");
-    return 0;
-  }
-  // 3: exit if first push longer than 1,5 sec
-  led(LED_OFF);
-  delay(500);
-  if(digitalRead(BUTTONPIN) != HIGH) {
-    // skip if it pushed by mistake
-    led(LED_OFF);
-    printf("BUTTON: Error: Incorrect push! It's too long.\n\r");
-    return 0;
-  }
-  // 4: counting push
-  int count_pushed = 0;
-  byte last_button_state;
-  if(DEBUG) printf("BUTTON: Info: Button is waiting for commands.\n\r");
-  int wait = 3000;
-  long last_pushed = millis();
-  while(millis() < wait+last_pushed) {
-    // read button
-    byte button = digitalRead(BUTTONPIN);
-    // check for changing state from release to push
-    if(button != last_button_state && button != HIGH) {
-      led(LED_RED);
-      count_pushed++;
-      if(DEBUG) printf("BUTTON: Info: %d push after %d msec.\n\r",
-                  count_pushed, millis()-last_pushed);
-      delay(250);
-    }
-    led(LED_OFF);
-    last_button_state = button;
-  }
-  if(DEBUG) printf("BUTTON: Info: Button is pushed: %d times.\n\r", 
-              count_pushed);
-  return count_pushed;
-}
-
-/****************************************************************************/
-
-void relay(char* relay, int state) {
-  // turn on/off
-  if(relay == RELAY_1) {
-    digitalWrite(RELAY1PIN, state);
-    if(DEBUG) printf("RELAY: Info: %s is enabled.\n\r", relay);
-
-  } else if(relay == RELAY_2) {
-    digitalWrite(RELAY2PIN, state);
-    if(DEBUG) printf("RELAY: Info: %s is disabled.\n\r", relay);
-  }
-  // save states
-  if(state == RELAY_ON) {
-    states[relay] = true;
-    states[POWER] = true;
-
-  } else if(state == RELAY_OFF) {
-    states[relay] = false;
-
-    if(states[RELAY_1] == states[RELAY_2])
-      states[POWER] = false;
   }
 }
 
@@ -318,38 +216,23 @@ bool read_DHT11() {
 /****************************************************************************/
 
 bool read_ACS712() {
-  // reading sensitivity
-  int sensitivity = 200;
-  // check relays state
-  if(states[POWER] == false) {
-    states[AMPERAGE] = 0;
-    // calibarate zero value
-    ACS712_shift = analogReadAccuracy(ACS712PIN, sensitivity);
-    if(DEBUG) printf("ACS712: Info: Calibrated: Shift is %u.\n\r", ACS712_shift);
-    return false;
+  acs12 ACS12;
+  int state;
+  // check power
+  if(states[POWER]) {
+    state = ACS12.read(ACS712PIN);
+  } else {
+    state = ACS12.calibrate(ACS712PIN);
   }
-  // read sensor
-  uint16_t sensor = analogReadAccuracy(ACS712PIN, sensitivity);
-  // calculate
-  // 512 = 0A = 2500mV, shift = 512
-  // 100mV/(2500mV/512) = 20.48mA = 513
-  int delta = sensor - ACS712_shift;
-  states[AMPERAGE] = delta * 20.48;
 
-  if(DEBUG) printf("ACS712: Info: Sensor: %u, Delta: %d, Amperage: %d.\n\r", 
-              sensor, delta, states[AMPERAGE]);
-  return true;
-}
-
-/****************************************************************************/
-
-uint16_t analogReadAccuracy(int pin, int sensitivity) {
-  uint64_t sum = 0;
-  for(int i = 0; i < sensitivity; i++) {
-    sum = sum + analogRead(pin);
-    delay(5);
+  switch (state) {
+    case ACS12LIB_OK:
+      states[AMPERAGE] = ACS12.amperage;
+      return true;
+    case ACS12LIB_CALIBRATED:
+      return true;
+    default: 
+      printf("ACS12: Error: Unknown error!\n\r");
+      return false;
   }
-  return sum / sensitivity;
 }
-
-/****************************************************************************/

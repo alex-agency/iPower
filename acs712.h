@@ -2,7 +2,6 @@
 #ifndef __ACS712_H__
 #define __ACS712_H__
 
-
 bool read_ACS712() {
   // reading sensitivity
   int sensitivity = 200;
