@@ -7,7 +7,7 @@
 #define BUTTONLIB_ERROR_SHORT_START  -1
 #define BUTTONLIB_ERROR_LONG_START  -2
 
-#define BUTTONLIB_DEBUG  true
+#define BUTTONLIB_DEBUG  false
 
 class button 
 {
@@ -63,6 +63,7 @@ public:
     }
     if(BUTTONLIB_DEBUG) printf("BUTTON: Info: Button is pushed: %d times.\n\r", 
                 command);
+    return BUTTONLIB_OK;
   };
 };
 

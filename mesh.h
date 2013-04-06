@@ -67,7 +67,7 @@ public:
   /**
   * Send payload message to node by unique id.
   */
-  bool send(const void* message, uint16_t to_id);
+  bool send(const Payload payload, uint16_t to_id);
 
   /**
   * Update node, handle new messages and
@@ -83,7 +83,7 @@ public:
   /**
   * Read available messages, get payload message
   */
-  void read(void*);
+  void read(Payload&);
 
 private:
   RF24& radio; /**< Underlying radio driver, provides link/physical layers */
@@ -113,7 +113,7 @@ private:
   * Send message with type A, send new Address node request.
   * Request new address from base
   */
-  bool send_A(uint16_t new_address);
+  bool send_A(const uint16_t new_address);
 
   /**
   * Handle message with type A, handle new Address node request.

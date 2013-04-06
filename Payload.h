@@ -9,8 +9,13 @@
  */
 struct Payload
 {
-  CreateHashMap(sensors, char*, int, 3);
-  CreateHashMap(controls, char*, int, 2);
+  //CreateHashMap(sensors, char*, int, 3);
+  HashMap<char*,int,3> sensors;
+  //CreateHashMap(controls, char*, int, 2);
+  HashMap<char*,int,2> controls;
+  //////////
+  int test;
+  //////////
   const void print() const
   {
     printf_P(PSTR("Sensors: "));

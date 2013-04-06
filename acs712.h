@@ -3,7 +3,7 @@
 #define __ACS712_H__
 
 #define ACSLIB_OK  0
-#define ACSLIB_DEBUG  true
+#define ACSLIB_DEBUG  false
 
 const int sensitivity = 200;
 uint16_t shift = 512;

@@ -95,6 +95,7 @@ void loop()
   while( mesh.available() ) {
     mesh.read(&payload);
     if(DEBUG) {
+      printf("PAYLOAD: Info: Got payload: test: %d", payload.test);
       printf("PAYLOAD: Info: Got payload: ");
       payload.print();
       printf("\n\r");
@@ -118,7 +119,7 @@ void loop()
     charge_payload();
     // send message to base
     mesh.send(&payload, base_id);
-    delay(2000);
+    delay(5000);
   }
 
   // check button
@@ -140,8 +141,11 @@ void charge_payload() {
   // get relays state
   payload.controls[RELAY_1] = states[RELAY_1];
   payload.controls[RELAY_2] = states[RELAY_2];
-  
+  //////
+  payload.test = 6;
+  //////
   if(DEBUG) {
+    printf("PAYLOAD: Info: New payload: test: %d", payload.test);
     printf("PAYLOAD: Info: New payload: ");
     payload.print();
     printf("\n\r");
@@ -273,7 +277,7 @@ bool read_ACS712() {
   switch (state) {
     case ACSLIB_OK:
       states[AMPERAGE] = ACS712.amperage;
-      if(DEBUG) printf("ACS12: Info: Sensor value: amperage: %d.\n\r", 
+      if(DEBUG) printf("ACS712: Info: Sensor value: amperage: %d.\n\r", 
                           states[AMPERAGE]);
       return true;
     default: 
