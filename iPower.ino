@@ -8,6 +8,7 @@
 #include "HashMap.h"
 #include "Payload.h"
 #include "acs712.h"
+#include "button.h"
 
 // Declare SPI bus pins
 #define CE_PIN  9
@@ -44,7 +45,6 @@ const uint16_t base_id = 00;
 // Declare state map keys
 #define RELAY_1  "relay 1"
 #define RELAY_2  "relay 2"
-#define POWER  "power"
 // Declare state map values
 #define RELAY_OFF  1
 #define RELAY_ON  0
@@ -56,8 +56,6 @@ const uint16_t base_id = 00;
 
 // Declare ACS712 sensor analog pin
 #define ACS712PIN  A0
-// Shifting value for calibrate sensor
-uint16_t ACS712_shift = 512;
 // Declare state map key
 #define AMPERAGE  "amperage"
 
@@ -78,25 +76,11 @@ void setup()
   // Configure console
   Serial.begin(57600);
   printf_begin();
-
+  
   // initialize radio
   radio.begin();
   // initialize network
   mesh.begin(channel, node_id);
-
-  // initialize button pin with internal pullup resistor
-  pinMode(BUTTONPIN, INPUT_PULLUP);
-
-  // initialize led pins
-  pinMode(LEDREDPIN, OUTPUT);
-  pinMode(LEDGREENPIN, OUTPUT);
-
-  // initialize relays pin
-  pinMode(RELAY1PIN, OUTPUT);
-  pinMode(RELAY2PIN, OUTPUT);
-
-  // initialize sensor pin with internal pullup resistor
-  pinMode(ACS712PIN, INPUT_PULLUP);
 }
 
 //
@@ -129,12 +113,12 @@ void loop()
   
   // connection ready
   if( mesh.ready() ) {
-    led(LED_GREEN);
+    led_blink(LED_GREEN, true);
     // fill payload message
     charge_payload();
     // send message to base
     mesh.send(&payload, base_id);
-    delay(4000);
+    delay(2000);
   }
 
   // check button
@@ -166,26 +150,94 @@ void charge_payload() {
 
 /****************************************************************************/
 
-void handle_button() {
-  switch ( read_button() ) {
+void led_blink(char* led, bool blink) {
+  // blinking
+  if(blink && states[led]) {
+    led = LED_OFF;
+  }
+  // clear all states
+  states[LED_RED] = false;
+  states[LED_GREEN] = false;
+
+  if(led == LED_RED) {
+    // initialize led pins
+    pinMode(LEDREDPIN, OUTPUT);
+    // enable red led
+    digitalWrite(LEDREDPIN, HIGH);
+    digitalWrite(LEDGREENPIN, LOW);
+    // save state
+    states[LED_RED] = true;
+
+  } else if(led == LED_GREEN) {
+    // initialize led pins
+    pinMode(LEDGREENPIN, OUTPUT);
+    // enable green led
+    digitalWrite(LEDGREENPIN, HIGH);
+    digitalWrite(LEDREDPIN, LOW);
+    // save state
+    states[LED_GREEN] = true;
+    
+  } else {
+    // disable leds
+    digitalWrite(LEDREDPIN, LOW);
+    digitalWrite(LEDGREENPIN, LOW);
+  }
+}
+
+/****************************************************************************/
+
+void relay(char* relay, int state) {
+  // initialize relays pin
+  pinMode(RELAY1PIN, OUTPUT);
+  pinMode(RELAY2PIN, OUTPUT);
+  // turn on/off
+  if(relay == RELAY_1) {
+    digitalWrite(RELAY1PIN, state);
+  } else if(relay == RELAY_2) {
+    digitalWrite(RELAY2PIN, state);
+  }
+  // save states
+  if(state == RELAY_ON) {
+    if(DEBUG) printf("RELAY: Info: %s is enabled.\n\r", relay);
+    states[relay] = true;
+  } else if(state == RELAY_OFF) {
+    if(DEBUG) printf("RELAY: Info: %s is disabled.\n\r", relay);
+    states[relay] = false;
+  }
+}
+
+/****************************************************************************/
+
+bool handle_button() {
+  button BUTTON;
+  //read button
+  int state = BUTTON.read(BUTTONPIN, LEDGREENPIN, LEDREDPIN);
+  if(state == BUTTONLIB_RELEASE) {
+    return false;
+  } else if(state != BUTTONLIB_OK) {
+    printf("BUTTON: Error: Incorrect push! It's too short or long.\n\r");
+    return false;
+  }
+  // handle command
+  switch (BUTTON.command) {
     case 1:
-      led(LED_RED);
+      led_blink(LED_RED, false);
       // turning ON relay #1
       relay(RELAY_1, RELAY_ON);
-      return;
+      return true;
     case 2:
-      led(LED_RED);
+      led_blink(LED_RED, false);
       // turning ON relay #2
       relay(RELAY_2, RELAY_ON);
-      return;
+      return true;
     case 3:
       // turning OFF relay #1 and #2
       relay(RELAY_1, RELAY_OFF);
       relay(RELAY_2, RELAY_OFF);
-      led(LED_OFF);
-      return;
+      led_blink(LED_OFF, false);
+      return true;
     default:
-      return;
+      return false;
   }
 }
 
@@ -201,7 +253,7 @@ bool read_DHT11() {
       if(DEBUG) printf("DHT11: Info: Sensor values: humidity: %d, temperature: %d.\n\r", 
                           states[HUMIDITY], states[TEMPERATURE]);
       return true;
-    case DHTLIB_ERROR_CHECKSUM:  
+    case DHTLIB_ERROR_CHECKSUM:
       printf("DHT11: Error: Checksum test failed!: The data may be incorrect!\n\r");
       return false;
     case DHTLIB_ERROR_TIMEOUT: 
@@ -216,23 +268,18 @@ bool read_DHT11() {
 /****************************************************************************/
 
 bool read_ACS712() {
-  acs12 ACS12;
-  int state;
-  // check power
-  if(states[POWER]) {
-    state = ACS12.read(ACS712PIN);
-  } else {
-    state = ACS12.calibrate(ACS712PIN);
-  }
-
+  acs712 ACS712;
+  int state = ACS712.read(ACS712PIN);
   switch (state) {
-    case ACS12LIB_OK:
-      states[AMPERAGE] = ACS12.amperage;
-      return true;
-    case ACS12LIB_CALIBRATED:
+    case ACSLIB_OK:
+      states[AMPERAGE] = ACS712.amperage;
+      if(DEBUG) printf("ACS12: Info: Sensor value: amperage: %d.\n\r", 
+                          states[AMPERAGE]);
       return true;
     default: 
-      printf("ACS12: Error: Unknown error!\n\r");
+      printf("ACS712: Error: Unknown error!\n\r");
       return false;
   }
 }
+
+/****************************************************************************/
