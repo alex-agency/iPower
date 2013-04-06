@@ -4,6 +4,7 @@
 
 #include <SPI.h>
 #include "RF24Network.h"
+#include "Payload.h"
 
 /**
  * Mesh Network Layer for RF24 Network
@@ -83,7 +84,7 @@ public:
   /**
   * Read available messages, get payload message
   */
-  void read(Payload&);
+  void read(Payload& payload);
 
 private:
   RF24& radio; /**< Underlying radio driver, provides link/physical layers */

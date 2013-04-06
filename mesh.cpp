@@ -1,7 +1,6 @@
 
 #include "Mesh.h"
 #include "HashMap.h"
-#include "Payload.h"
 
 // Debug info
 const bool DEBUG = true;

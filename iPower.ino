@@ -93,7 +93,7 @@ void loop()
 
   // new message available
   while( mesh.available() ) {
-    mesh.read(&payload);
+    mesh.read(payload);
     if(DEBUG) {
       printf("PAYLOAD: Info: Got payload: test: %d", payload.test);
       printf("PAYLOAD: Info: Got payload: ");
@@ -118,7 +118,7 @@ void loop()
     // fill payload message
     charge_payload();
     // send message to base
-    mesh.send(&payload, base_id);
+    mesh.send(payload, base_id);
     delay(5000);
   }
 
