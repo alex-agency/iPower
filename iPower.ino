@@ -95,7 +95,7 @@ void loop()
   while( mesh.available() ) {
     mesh.read(payload);
     if(DEBUG) {
-      printf("PAYLOAD: Info: Got payload: test: %d", payload.test);
+      printf("PAYLOAD: Info: Got payload: test: %d \n\r", payload.test);
       printf("PAYLOAD: Info: Got payload: ");
       payload.print();
       printf("\n\r");
@@ -129,6 +129,9 @@ void loop()
 /****************************************************************************/
 
 void charge_payload() {
+  //////
+  payload.test = 6;
+  //////
   // get DHT11 sensor values
   read_DHT11();
   payload.sensors[HUMIDITY] = states[HUMIDITY];
@@ -141,11 +144,9 @@ void charge_payload() {
   // get relays state
   payload.controls[RELAY_1] = states[RELAY_1];
   payload.controls[RELAY_2] = states[RELAY_2];
-  //////
-  payload.test = 6;
-  //////
+
   if(DEBUG) {
-    printf("PAYLOAD: Info: New payload: test: %d", payload.test);
+    printf("PAYLOAD: Info: New payload: test: %d \n\r", payload.test);
     printf("PAYLOAD: Info: New payload: ");
     payload.print();
     printf("\n\r");

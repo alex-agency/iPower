@@ -56,8 +56,8 @@ bool Mesh::send(const Payload payload, uint16_t to_id)
   uint16_t to_address = nodes[to_id];
   RF24NetworkHeader header(to_address, 'M');
   
-  if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Sending payload: %s \n\r"), 
-              node_id, node_address, header.toString());
+  if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Sending payload with size: %d: %s. \n\r"), 
+              node_id, node_address, sizeof(payload), header.toString());
 
   bool ok = network.write(header,&payload,sizeof(payload));
   if(ok) {
@@ -84,7 +84,7 @@ void Mesh::update()
     RF24NetworkHeader header;
     network.peek(header);
 
-    if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Got message: %s \n\r"),
+    if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Got message: %s. \n\r"),
                 node_id, node_address, header.toString());
     // Dispatch the message to the correct handler.
     switch (header.type) {
@@ -147,7 +147,9 @@ void Mesh::read(Payload& payload)
   network.peek(header);
 
   if(header.type == 'M') {
-    network.read(header,&payload,sizeof(payload));
+    int size = network.read(header,&payload,34);
+    if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Got payload with size: %d: %s. \n\r"),
+                    node_id, node_address, size, header.toString());
   }
 }
 
@@ -156,7 +158,7 @@ void Mesh::read(Payload& payload)
 bool Mesh::send_P()
 {
   RF24NetworkHeader header(base, 'P');
-  if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Sending ping: %s \n\r"), 
+  if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Sending ping: %s. \n\r"), 
               node_id, node_address, header.toString());
   return network.write(header,&node_id,sizeof(node_id));
 }
@@ -195,7 +197,7 @@ void Mesh::handle_P(RF24NetworkHeader& header)
 bool Mesh::send_A(const uint16_t new_address)
 {
   RF24NetworkHeader header(homeless, 'A');
-  if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Sending new address '0%o': %s \n\r"), 
+  if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Sending new address '0%o': %s. \n\r"), 
               node_id, node_address, new_address, header.toString());
   return network.write(header,&new_address,sizeof(new_address));
 }
