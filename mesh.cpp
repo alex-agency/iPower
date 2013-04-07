@@ -1,16 +1,12 @@
 
 #include "Mesh.h"
 #include "HashMap.h"
+#include "RF24.h"
+
+HashMap<uint16_t, uint16_t, 5> nodes; /**< HashMap that pairs id to address and can hold number pairs */
 
 // Debug info
 const bool DEBUG = true;
-
-/**
- * Nodes 
- * 
- * HashMap that pairs id to address and can hold number pairs
- */
-CreateHashMap(nodes, uint16_t, uint16_t, 5);
 
 /****************************************************************************/
 
@@ -19,7 +15,9 @@ Mesh::Mesh( RF24& _radio ): radio(_radio), network(radio) {}
 /****************************************************************************/
 
 void Mesh::begin(uint8_t _channel, uint16_t _node_id)
-{
+{  
+  // dynamic payload feature
+  //radio.enableDynamicPayloads();
   // save settings
   node_id = _node_id;
   channel = _channel;
@@ -31,7 +29,7 @@ void Mesh::begin(uint8_t _channel, uint16_t _node_id)
   else {
     node_address = homeless;
   }
-  if(DEBUG) printf_P(PSTR("MESH: Info: Initializing Node: id: %u, address: 0%o \n\r"),
+  if(DEBUG) printf_P(PSTR("MESH: Info: Initializing Node: id: %u, address: 0%o.\n\r"),
               node_id, node_address);
   // set address
   network.begin(channel, node_address);
@@ -56,8 +54,8 @@ bool Mesh::send(const Payload payload, uint16_t to_id)
   uint16_t to_address = nodes[to_id];
   RF24NetworkHeader header(to_address, 'M');
   
-  if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Sending payload with size: %d: %s. \n\r"), 
-              node_id, node_address, sizeof(payload), header.toString());
+  if(DEBUG) printf_P(PSTR("MESH: Info: %u, %s, %d byte: Sending payload.\n\r"), 
+              node_id, header.toString(), sizeof(payload));
 
   bool ok = network.write(header,&payload,sizeof(payload));
   if(ok) {
@@ -84,8 +82,8 @@ void Mesh::update()
     RF24NetworkHeader header;
     network.peek(header);
 
-    if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Got message: %s. \n\r"),
-                node_id, node_address, header.toString());
+    if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Got message %c from 0%o.\n\r"),
+                node_id, node_address, header.type, header.from_node);
     // Dispatch the message to the correct handler.
     switch (header.type) {
       case 'P':
@@ -114,10 +112,10 @@ void Mesh::update()
     if(node_address == homeless) {
       bool ok = send_P();
       if(ok) {
-        if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Ping: Send: ok \n\r"),
+        if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Ping: Sent: ok.\n\r"),
                     node_id, node_address);
       } else {
-        if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Ping: Send: failed! \n\r"),
+        if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Ping: Sent: failed!\n\r"),
                     node_id, node_address);
       }
     }
@@ -147,9 +145,10 @@ void Mesh::read(Payload& payload)
   network.peek(header);
 
   if(header.type == 'M') {
-    int size = network.read(header,&payload,34);
-    if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Got payload with size: %d: %s. \n\r"),
-                    node_id, node_address, size, header.toString());
+    uint8_t size = sizeof(payload);//radio.getDynamicPayloadSize();
+    uint8_t received = network.read(header,&payload,size);
+    if(DEBUG) printf_P(PSTR("MESH: Info: %u, %s, %d byte: Received payload.\n\r"),
+                node_id, header.toString(), received);
   }
 }
 
@@ -158,8 +157,8 @@ void Mesh::read(Payload& payload)
 bool Mesh::send_P()
 {
   RF24NetworkHeader header(base, 'P');
-  if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Sending ping: %s. \n\r"), 
-              node_id, node_address, header.toString());
+  if(DEBUG) printf_P(PSTR("MESH: Info: %u, %s, %d byte: Sending ping...\n\r"), 
+              node_id, header.toString(), sizeof(node_id));
   return network.write(header,&node_id,sizeof(node_id));
 }
 
@@ -168,7 +167,10 @@ bool Mesh::send_P()
 void Mesh::handle_P(RF24NetworkHeader& header)
 {
   uint16_t id;
-  network.read(header,&id,sizeof(id));
+  uint8_t size = sizeof(id);//radio.getDynamicPayloadSize();
+  uint8_t received = network.read(header,&id,size);
+  if(DEBUG) printf_P(PSTR("MESH: Info: %u, %s, %d byte: Received ping.\n\r"),
+              node_id, header.toString(), received);
   
   if(header.from_node == homeless) {
     uint16_t new_address;
@@ -186,9 +188,9 @@ void Mesh::handle_P(RF24NetworkHeader& header)
   nodes[id] = header.from_node;
   if(DEBUG) {
     printf_P(PSTR("MESH: Info: %u, 0%o: Node is updated its map: "), 
-              node_id, node_address);
+      node_id, node_address);
     nodes.print();
-    printf_P(PSTR("\n\r"));
+    printf_P(PSTR(".\n\r"));
   }
 }
 
@@ -197,8 +199,8 @@ void Mesh::handle_P(RF24NetworkHeader& header)
 bool Mesh::send_A(const uint16_t new_address)
 {
   RF24NetworkHeader header(homeless, 'A');
-  if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Sending new address '0%o': %s. \n\r"), 
-              node_id, node_address, new_address, header.toString());
+  if(DEBUG) printf_P(PSTR("MESH: Info: %u, %s, %d byte: Sending new address '0%o'.\n\r"), 
+              node_id, header.toString(), sizeof(new_address), new_address);
   return network.write(header,&new_address,sizeof(new_address));
 }
 
@@ -207,7 +209,10 @@ bool Mesh::send_A(const uint16_t new_address)
 void Mesh::handle_A(RF24NetworkHeader& header)
 {
   uint16_t new_address;
-  network.read(header,&new_address,sizeof(new_address));
+  uint8_t size = sizeof(new_address);//radio.getDynamicPayloadSize();
+  uint8_t received = network.read(header,&new_address,size);
+  if(DEBUG) printf_P(PSTR("MESH: Info: %u, %s, %d byte: Received address '0%o'.\n\r"),
+              node_id, header.toString(), received, new_address);
   // reinitialize node
   set_address(new_address);
 }
@@ -238,7 +243,7 @@ void Mesh::set_address(uint16_t address)
   // update setting
   node_address = address;
 
-  if(DEBUG) printf_P(PSTR("MESH: Info: Reinitializing Node: id: %u, new address: 0%o \n\r"),
+  if(DEBUG) printf_P(PSTR("MESH: Info: Reinitializing Node: id: %u, new address: 0%o.\n\r"),
               node_id, node_address);
   // apply new address
   network.begin(channel, node_address);
@@ -247,10 +252,10 @@ void Mesh::set_address(uint16_t address)
   if(ok) {
     // change connection state
     state_ready = true;
-    if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Ping: Send: ok \n\r"),
+    if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Ping: Send: ok.\n\r"),
                 node_id, node_address);    
   } else {
-    if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Ping: Send: failed! \n\r"),
+    if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Ping: Send: failed!\n\r"),
                 node_id, node_address);
     // reset state
     reset_node();
@@ -270,7 +275,7 @@ void Mesh::reset_node()
   // reset setting
   node_address = homeless;
   
-  if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Node is flashed. \n\r"), 
+  if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Node is flashed.\n\r"), 
               node_id, node_address);
   // reinitialize node
   network.begin(channel, homeless);

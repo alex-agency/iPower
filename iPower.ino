@@ -6,9 +6,9 @@
 #include "printf.h"
 #include "dht11.h"
 #include "HashMap.h"
-#include "Payload.h"
 #include "acs712.h"
 #include "button.h"
+#include "Payload.h"
 
 // Declare SPI bus pins
 #define CE_PIN  9
@@ -17,8 +17,8 @@
 RF24 radio(CE_PIN, CS_PIN);
 // Set up network
 Mesh mesh(radio);
-// Declare radio channel 1-128
-const uint8_t channel = 90;
+// Declare radio channel 0-127
+const uint8_t channel = 76;
 // Declare unique node id
 const uint16_t node_id = 1001;
 // Declare base id, base always has 00 id
@@ -59,11 +59,13 @@ const uint16_t base_id = 00;
 // Declare state map key
 #define AMPERAGE  "amperage"
 
-// Declare payload
+// Declare payload (24byte maximum)
 Payload payload;
+// used for many payloads
+uint8_t last_sent_payload = 0;
 
 // Declare state map
-CreateHashMap(states, char*, int, 8);
+HashMap<char*,uint8_t,8> states;
 
 // Debug info.
 const bool DEBUG = true;
@@ -95,20 +97,19 @@ void loop()
   while( mesh.available() ) {
     mesh.read(payload);
     if(DEBUG) {
-      printf("PAYLOAD: Info: Got payload: test: %d \n\r", payload.test);
       printf("PAYLOAD: Info: Got payload: ");
       payload.print();
       printf("\n\r");
     }
 
-    if( payload.controls[RELAY_1] )
+    //if(payload.get(RELAY_1))
       relay(RELAY_1, RELAY_ON);
-    else
+    //else
       relay(RELAY_1, RELAY_OFF);
     
-    if( payload.controls[RELAY_2] )
+    //if(payload.get(RELAY_2))
       relay(RELAY_2, RELAY_ON);
-    else
+    //else
       relay(RELAY_2, RELAY_OFF);
   }
   
@@ -119,7 +120,6 @@ void loop()
     charge_payload();
     // send message to base
     mesh.send(payload, base_id);
-    delay(5000);
   }
 
   // check button
@@ -129,24 +129,28 @@ void loop()
 /****************************************************************************/
 
 void charge_payload() {
-  //////
-  payload.test = 6;
-  //////
-  // get DHT11 sensor values
-  read_DHT11();
-  payload.sensors[HUMIDITY] = states[HUMIDITY];
-  payload.sensors[TEMPERATURE] = states[TEMPERATURE];
-  
-  // get ACS712 sensor value
-  read_ACS712();
-  payload.sensors[AMPERAGE] = states[AMPERAGE];
-  
-  // get relays state
-  payload.controls[RELAY_1] = states[RELAY_1];
-  payload.controls[RELAY_2] = states[RELAY_2];
+  // clear payload
+  payload.clear();
+  // make first payload
+  //if(last_sent_payload != 1) {
+    // get DHT11 sensor values
+    read_DHT11();
+    payload.put(1, states[HUMIDITY]);
+    payload.put(2, states[TEMPERATURE]);
+    // get ACS712 sensor value
+    read_ACS712();
+    payload.put(3, states[AMPERAGE]);
 
+    last_sent_payload = 1;
+  // make second payload
+  //} else if(last_sent_payload != 2) {
+    // get relays state
+    payload.put(4, states[RELAY_1]);
+    payload.put(5, states[RELAY_2]);
+
+    last_sent_payload = 2;
+  //}
   if(DEBUG) {
-    printf("PAYLOAD: Info: New payload: test: %d \n\r", payload.test);
     printf("PAYLOAD: Info: New payload: ");
     payload.print();
     printf("\n\r");
