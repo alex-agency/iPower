@@ -8,7 +8,6 @@
 #include "HashMap.h"
 #include "acs712.h"
 #include "button.h"
-#include "Payload.h"
 
 // Declare SPI bus pins
 #define CE_PIN  9
@@ -97,9 +96,7 @@ void loop()
   while( mesh.available() ) {
     mesh.read(payload);
     if(DEBUG) {
-      printf("PAYLOAD: Info: Got payload: ");
-      payload.print();
-      printf("\n\r");
+      printf("PAYLOAD: Info: Got payload: %s.\n\r", payload.toString());
     }
 
     //if(payload.get(RELAY_1))

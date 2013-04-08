@@ -1,0 +1,25 @@
+#include <iostream>
+using namespace std;
+
+class IntList
+{
+private:
+    int m_anList[10];
+ 
+public:
+    int& operator[] (const int nIndex);
+};
+ 
+int& IntList::operator[] (const int nIndex)
+{
+    return m_anList[nIndex];
+}
+ 
+int main()
+{
+  IntList cMyList;
+  cMyList[2] = 3; // set a value
+  cout << cMyList[2]; // get a value
+ 
+  return 0;
+}

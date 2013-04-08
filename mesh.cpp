@@ -3,10 +3,38 @@
 #include "HashMap.h"
 #include "RF24.h"
 
-HashMap<uint16_t, uint16_t, 5> nodes; /**< HashMap that pairs id to address and can hold number pairs */
-
 // Debug info
 const bool DEBUG = true;
+
+// HashMap that pairs id to address and can hold number pairs
+HashMap<uint16_t, uint16_t, 5> nodes;
+
+// Payload message. Network has size limit of 24 byte per message.
+struct Payload {
+    char key[20];
+    int value;
+
+    const int& operator[](const char* _key) const {
+      return operator[](_key);
+    };
+    
+    int& operator[](const char* _key) {
+      if (key == _key) {
+        return value;
+      }
+      else {
+        key = _key;
+        value = int;
+        return int;
+      }
+    };
+    
+    const char* toString() const {
+        static char buffer[30];
+        snprintf_P(buffer,sizeof(buffer),PSTR("{%s=%d}"), key, value);
+        return buffer;   
+    };
+};
 
 /****************************************************************************/
 
@@ -186,12 +214,8 @@ void Mesh::handle_P(RF24NetworkHeader& header)
   }
   // add new or update existing node
   nodes[id] = header.from_node;
-  if(DEBUG) {
-    printf_P(PSTR("MESH: Info: %u, 0%o: Node is updated its map: "), 
-      node_id, node_address);
-    nodes.print();
-    printf_P(PSTR(".\n\r"));
-  }
+  if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Node is updated its map: %s.\n\r"), 
+              node_id, node_address, nodes.toString());
 }
 
 /****************************************************************************/

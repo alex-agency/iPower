@@ -4,7 +4,6 @@
 
 #include <SPI.h>
 #include "RF24Network.h"
-#include "Payload.h"
 
 /**
  * Mesh Network Layer for RF24 Network

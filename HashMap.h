@@ -224,21 +224,23 @@ class HashMap
       nil = nullv;
     }
 
-    const void print() const
-    {
-      int size = currentIndex;
-      if(size == 0) {
-        printf_P(PSTR("{}"));
-        return;        
-      }
-      printf_P(PSTR("{"));
-      for(int i=0; i<size; i++) {
-        printf_P(PSTR("%d=%d"), keys[i], values[i]);
-        if(i<size-1)
-          printf_P(PSTR(", "));
-        else
-          printf_P(PSTR("}"));
-      }
+    const char* toString() const {
+        static char buffer[30];
+        int size = currentIndex;
+        if(size == 0) {
+          snprintf_P(buffer,sizeof(buffer),PSTR("{}"));
+          return buffer;
+        }
+        snprintf_P(buffer,sizeof(buffer),PSTR("{%s"), buffer);
+        for(int i=0; i<size; i++) {
+          snprintf_P(buffer,sizeof(buffer),PSTR("%s%d=%d"), 
+            buffer, keys[i], values[i]);
+          if(i<size-1)
+            snprintf_P(buffer,sizeof(buffer),PSTR("%s, "), buffer);
+          else
+            snprintf_P(buffer,sizeof(buffer),PSTR("%s}"), buffer);
+        }
+        return buffer;   
     }
 
   protected:
