@@ -61,6 +61,9 @@ const uint16_t base_id = 00;
 // Declare state map
 HashMap<char*,uint8_t,8> states;
 
+const static uint16_t interval = 5000; /**< Delay manager in ms */
+unsigned long last_time_sent; /** time's stamp when last message was sent */
+
 // Debug info.
 const bool DEBUG = true;
 
@@ -92,14 +95,24 @@ void loop()
     Payload payload;
     mesh.read(payload);
     
-    if(payload.key == RELAY_1)
-      relay(RELAY_1, payload.value);
-    else if(payload.key == RELAY_2)
-      relay(RELAY_2, payload.value);
+    if(payload.value)
+      relay(payload.key, RELAY_ON);
+    else if(payload.value == false)
+      relay(payload.key, RELAY_OFF);
   }
   
-  // connection ready
-  if( mesh.ready() ) {
+  
+  
+  ///// Slepping....
+  
+  
+  
+  
+  // Send message every 'interval' ms 
+  unsigned long now = millis();
+  if ( mesh.ready() && now >= interval + last_time_sent ) {
+    last_time_sent = now;
+    
     led_blink(LED_GREEN, true);
     
     // send DHT11 sensor values
@@ -127,7 +140,7 @@ void loop()
 
 /****************************************************************************/
 
-void led_blink(char* led, bool blink) {
+void led_blink(char led[20], bool blink) {
   // blinking
   if(blink && states[led]) {
     led = LED_OFF;
@@ -136,7 +149,7 @@ void led_blink(char* led, bool blink) {
   states[LED_RED] = false;
   states[LED_GREEN] = false;
 
-  if(led == LED_RED) {
+  if( strcmp(led, LED_RED) ) {
     // initialize led pins
     pinMode(LEDREDPIN, OUTPUT);
     // enable red led
@@ -145,7 +158,7 @@ void led_blink(char* led, bool blink) {
     // save state
     states[LED_RED] = true;
 
-  } else if(led == LED_GREEN) {
+  } else if( strcmp(led, LED_GREEN) ) {
     // initialize led pins
     pinMode(LEDGREENPIN, OUTPUT);
     // enable green led
@@ -163,15 +176,18 @@ void led_blink(char* led, bool blink) {
 
 /****************************************************************************/
 
-void relay(char* relay, int state) {
+void relay(char relay[20], int state) {
   // initialize relays pin
   pinMode(RELAY1PIN, OUTPUT);
   pinMode(RELAY2PIN, OUTPUT);
   // turn on/off
-  if(relay == RELAY_1) {
+  if( strcmp(relay, RELAY_1) ) {
     digitalWrite(RELAY1PIN, state);
-  } else if(relay == RELAY_2) {
+  } else if( strcmp(relay, RELAY_2) ) {
     digitalWrite(RELAY2PIN, state);
+  } else {
+    printf("RELAY: Error: '%s' is unknown!\n\r", relay);
+    return;
   }
   // save states
   if(state == RELAY_ON) {

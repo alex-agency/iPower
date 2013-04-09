@@ -133,9 +133,9 @@ private:
   uint8_t channel; /**< The RF channel to operate on (0-127) */
   const static uint16_t base = 00; /**< Base address */
   const static uint16_t homeless = 05; /**< homeless address is last address in the network */
-  const static uint16_t interval = 2000; /**< Delay manager in ms */
+  const static uint16_t interval = 10000; /**< Delay manager in ms */
   unsigned long last_time_sent; /** time's stamp when last message was sent */
-  bool state_ready; /**< connection state */
+  bool connection_ready; /**< connection state */
 
   /**
   * Send message with type P, send Ping request.
