@@ -149,7 +149,7 @@ void led_blink(char led[20], bool blink) {
   states[LED_RED] = false;
   states[LED_GREEN] = false;
 
-  if( strcmp(led, LED_RED) ) {
+  if( strcmp(led, LED_RED)==0 ) {
     // initialize led pins
     pinMode(LEDREDPIN, OUTPUT);
     // enable red led
@@ -158,7 +158,7 @@ void led_blink(char led[20], bool blink) {
     // save state
     states[LED_RED] = true;
 
-  } else if( strcmp(led, LED_GREEN) ) {
+  } else if( strcmp(led, LED_GREEN)==0 ) {
     // initialize led pins
     pinMode(LEDGREENPIN, OUTPUT);
     // enable green led
@@ -181,9 +181,9 @@ void relay(char relay[20], int state) {
   pinMode(RELAY1PIN, OUTPUT);
   pinMode(RELAY2PIN, OUTPUT);
   // turn on/off
-  if( strcmp(relay, RELAY_1) ) {
+  if( strcmp(relay, RELAY_1)==0 ) {
     digitalWrite(RELAY1PIN, state);
-  } else if( strcmp(relay, RELAY_2) ) {
+  } else if( strcmp(relay, RELAY_2)==0 ) {
     digitalWrite(RELAY2PIN, state);
   } else {
     printf("RELAY: Error: '%s' is unknown!\n\r", relay);
