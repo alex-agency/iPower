@@ -58,11 +58,6 @@ const uint16_t base_id = 00;
 // Declare state map key
 #define AMPERAGE  "amperage"
 
-// Declare payload (24byte maximum)
-Payload payload;
-// used for many payloads
-uint8_t last_sent_payload = 0;
-
 // Declare state map
 HashMap<char*,uint8_t,8> states;
 
@@ -94,64 +89,40 @@ void loop()
 
   // new message available
   while( mesh.available() ) {
+    Payload payload;
     mesh.read(payload);
-    if(DEBUG) {
-      printf("PAYLOAD: Info: Got payload: %s.\n\r", payload.toString());
-    }
-
-    //if(payload.get(RELAY_1))
-      relay(RELAY_1, RELAY_ON);
-    //else
-      relay(RELAY_1, RELAY_OFF);
     
-    //if(payload.get(RELAY_2))
-      relay(RELAY_2, RELAY_ON);
-    //else
-      relay(RELAY_2, RELAY_OFF);
+    if(payload.key == RELAY_1)
+      relay(RELAY_1, payload.value);
+    else if(payload.key == RELAY_2)
+      relay(RELAY_2, payload.value);
   }
   
   // connection ready
   if( mesh.ready() ) {
     led_blink(LED_GREEN, true);
-    // fill payload message
-    charge_payload();
-    // send message to base
-    mesh.send(payload, base_id);
-  }
+    
+    // send DHT11 sensor values
+    read_DHT11();
+    Payload payload1(HUMIDITY, states[HUMIDITY]);
+    mesh.send(payload1, base_id);
+    Payload payload2(TEMPERATURE, states[TEMPERATURE]);
+    mesh.send(payload2, base_id);
+    
+    // send ACS712 sensor value
+    read_ACS712();
+    Payload payload3(AMPERAGE, states[AMPERAGE]);
+    mesh.send(payload3, base_id);
 
+    // send relays state
+    Payload payload4(RELAY_1, states[RELAY_1]);
+    mesh.send(payload4, base_id);
+    Payload payload5(RELAY_2, states[RELAY_2]);
+    mesh.send(payload5, base_id);
+  }
+  
   // check button
   handle_button();
-}
-
-/****************************************************************************/
-
-void charge_payload() {
-  // clear payload
-  payload.clear();
-  // make first payload
-  //if(last_sent_payload != 1) {
-    // get DHT11 sensor values
-    read_DHT11();
-    payload.put(1, states[HUMIDITY]);
-    payload.put(2, states[TEMPERATURE]);
-    // get ACS712 sensor value
-    read_ACS712();
-    payload.put(3, states[AMPERAGE]);
-
-    last_sent_payload = 1;
-  // make second payload
-  //} else if(last_sent_payload != 2) {
-    // get relays state
-    payload.put(4, states[RELAY_1]);
-    payload.put(5, states[RELAY_2]);
-
-    last_sent_payload = 2;
-  //}
-  if(DEBUG) {
-    printf("PAYLOAD: Info: New payload: ");
-    payload.print();
-    printf("\n\r");
-  }
 }
 
 /****************************************************************************/

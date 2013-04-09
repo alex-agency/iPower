@@ -6,6 +6,46 @@
 #include "RF24Network.h"
 
 /**
+ * Payload which is sent as main message
+ *
+ * This object mapping key to value.
+ * Size of payload cannot be more than 24 byte.
+ */
+struct Payload
+{
+    char key[20];
+    int value;
+
+    /**
+     * Default constructor
+     *
+     * Simply constructs a blank payload
+     */
+    Payload() {}
+
+    /**
+     * Message constructor to create object 
+     * and set values of key and value.
+     *
+     * @code
+     *  Payload payload("temperature", 24);
+     *  mesh.send(payload, base_id);
+     * @endcode
+     */
+    Payload(const char* _key, int _value) {
+      strcpy(key, _key);
+      value = _value;
+    }
+
+    /**
+     * Create debugging string
+     *
+     * @return String representation of this object
+     */
+    const char* toString(void) const;
+};
+
+/**
  * Mesh Network Layer for RF24 Network
  *
  * This class implements an Mesh Network Layer using nRF24L01(+) radios driven
@@ -67,7 +107,7 @@ public:
   /**
   * Send payload message to node by unique id.
   */
-  bool send(const Payload payload, uint16_t to_id);
+  bool send(Payload& payload, uint16_t to_id);
 
   /**
   * Update node, handle new messages and
@@ -140,4 +180,5 @@ private:
   */
   void reset_node();
 };
+
 #endif // __MESH_H__

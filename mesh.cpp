@@ -6,35 +6,8 @@
 // Debug info
 const bool DEBUG = true;
 
-// HashMap that pairs id to address and can hold number pairs
-HashMap<uint16_t, uint16_t, 5> nodes;
-
-// Payload message. Network has size limit of 24 byte per message.
-struct Payload {
-    char key[20];
-    int value;
-
-    const int& operator[](const char* _key) const {
-      return operator[](_key);
-    };
-    
-    int& operator[](const char* _key) {
-      if (key == _key) {
-        return value;
-      }
-      else {
-        key = _key;
-        value = int;
-        return int;
-      }
-    };
-    
-    const char* toString() const {
-        static char buffer[30];
-        snprintf_P(buffer,sizeof(buffer),PSTR("{%s=%d}"), key, value);
-        return buffer;   
-    };
-};
+// Declare hashMap that pairs id to address and can hold number pairs.
+HashMap<uint16_t, uint16_t, 10> nodes;
 
 /****************************************************************************/
 
@@ -72,7 +45,7 @@ bool Mesh::ready()
 
 /****************************************************************************/
 
-bool Mesh::send(const Payload payload, uint16_t to_id)
+bool Mesh::send(Payload& payload, uint16_t to_id)
 {
   if(to_id != base && nodes.contains(to_id) == false) {
     // we should know about this node
@@ -82,8 +55,8 @@ bool Mesh::send(const Payload payload, uint16_t to_id)
   uint16_t to_address = nodes[to_id];
   RF24NetworkHeader header(to_address, 'M');
   
-  if(DEBUG) printf_P(PSTR("MESH: Info: %u, %s, %d byte: Sending payload.\n\r"), 
-              node_id, header.toString(), sizeof(payload));
+  if(DEBUG) printf_P(PSTR("MESH: Info: %u, %s, %d byte: Sending payload: %s.\n\r"), 
+              node_id, header.toString(), sizeof(payload), payload.toString());
 
   bool ok = network.write(header,&payload,sizeof(payload));
   if(ok) {
@@ -96,6 +69,14 @@ bool Mesh::send(const Payload payload, uint16_t to_id)
     reset_node();
     return false;
   }
+}
+
+/****************************************************************************/
+
+const char* Payload::toString() const {
+  static char buffer[30];
+  snprintf_P(buffer,sizeof(buffer),PSTR("{%s=%d}"), key, value);
+  return buffer;   
 }
 
 /****************************************************************************/
@@ -175,8 +156,8 @@ void Mesh::read(Payload& payload)
   if(header.type == 'M') {
     uint8_t size = sizeof(payload);//radio.getDynamicPayloadSize();
     uint8_t received = network.read(header,&payload,size);
-    if(DEBUG) printf_P(PSTR("MESH: Info: %u, %s, %d byte: Received payload.\n\r"),
-                node_id, header.toString(), received);
+    if(DEBUG) printf_P(PSTR("MESH: Info: %u, %s, %d byte: Received payload: %s.\n\r"),
+                node_id, header.toString(), received, payload.toString());
   }
 }
 

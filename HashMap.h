@@ -225,22 +225,16 @@ class HashMap
     }
 
     const char* toString() const {
-        static char buffer[30];
-        int size = currentIndex;
-        if(size == 0) {
-          snprintf_P(buffer,sizeof(buffer),PSTR("{}"));
-          return buffer;
+        static char buffer[128];
+        strcpy(buffer, "{");
+        for(int i=0; i<currentIndex; i++) 
+        {
+            if (i > 0)
+                strcat(buffer, ", ");
+            sprintf_P(buffer,PSTR("%s%d=%d"), buffer, keys[i], values[i]); 
         }
-        snprintf_P(buffer,sizeof(buffer),PSTR("{%s"), buffer);
-        for(int i=0; i<size; i++) {
-          snprintf_P(buffer,sizeof(buffer),PSTR("%s%d=%d"), 
-            buffer, keys[i], values[i]);
-          if(i<size-1)
-            snprintf_P(buffer,sizeof(buffer),PSTR("%s, "), buffer);
-          else
-            snprintf_P(buffer,sizeof(buffer),PSTR("%s}"), buffer);
-        }
-        return buffer;   
+        strcat(buffer, "}");
+        return buffer; 
     }
 
   protected:
