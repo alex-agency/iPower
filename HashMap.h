@@ -231,7 +231,7 @@ class HashMap
         {
             if (i > 0)
                 strcat(buffer, ", ");
-            sprintf_P(buffer,PSTR("%s%d=%d"), buffer, keys[i], values[i]); 
+            sprintf(buffer,"%s%d=%d", buffer, keys[i], values[i]); 
         }
         strcat(buffer, "}");
         return buffer; 

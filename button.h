@@ -1,4 +1,3 @@
-
 #ifndef _BUTTON_H__
 #define _BUTTON_H__
 
@@ -55,14 +54,14 @@ public:
         digitalWrite(led2_pin, HIGH);
         command++;
         if(BUTTONLIB_DEBUG) printf("BUTTON: Info: %d push after %d msec.\n\r",
-                    command, millis()-last_pushed);
+                                command, millis()-last_pushed);
         delay(250);
       }
       digitalWrite(led2_pin, LOW);
       last_button_state = state;
     }
     if(BUTTONLIB_DEBUG) printf("BUTTON: Info: Button is pushed: %d times.\n\r", 
-                command);
+                            command);
     return BUTTONLIB_OK;
   };
 };

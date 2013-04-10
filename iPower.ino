@@ -3,11 +3,11 @@
 #include "nRF24L01.h"
 #include "RF24.h"
 #include "Mesh.h"
-#include "printf.h"
 #include "dht11.h"
 #include "HashMap.h"
 #include "acs712.h"
 #include "button.h"
+#include "timer.h"
 
 // Declare SPI bus pins
 #define CE_PIN  9
@@ -50,8 +50,6 @@ const uint16_t base_id = 00;
 
 // Declare pushbutton digital pin
 #define BUTTONPIN  4
-// Declare state map key
-#define PUSHBUTTON  "pushbutton"
 
 // Declare ACS712 sensor analog pin
 #define ACS712PIN  A0
@@ -59,10 +57,10 @@ const uint16_t base_id = 00;
 #define AMPERAGE  "amperage"
 
 // Declare state map
-HashMap<char*,uint8_t,8> states;
+CreateComplexHashMap(states, char*, char*, 7, strcmp);
 
-const static uint16_t interval = 5000; /**< Delay manager in ms */
-unsigned long last_time_sent; /** time's stamp when last message was sent */
+// Declare delay manager in ms
+timer_t send_timer(5000);
 
 // Debug info.
 const bool DEBUG = true;
@@ -74,8 +72,7 @@ void setup()
 {
   // Configure console
   Serial.begin(57600);
-  printf_begin();
-  
+
   // initialize radio
   radio.begin();
   // initialize network
@@ -89,8 +86,8 @@ void loop()
 {
   // update network
   mesh.update();
-
-  // new message available
+  
+  // is new pauload message available?
   while( mesh.available() ) {
     Payload payload;
     mesh.read(payload);
@@ -100,20 +97,13 @@ void loop()
     else if(payload.value == false)
       relay(payload.key, RELAY_OFF);
   }
-  
-  
-  
+
+
   ///// Slepping....
-  
-  
-  
-  
-  // Send message every 'interval' ms 
-  unsigned long now = millis();
-  if ( mesh.ready() && now >= interval + last_time_sent ) {
-    last_time_sent = now;
-    
-    led_blink(LED_GREEN, true);
+
+  if( mesh.ready() && send_timer() ) {
+
+    led_blink(LED_GREEN, false);
     
     // send DHT11 sensor values
     read_DHT11();
@@ -132,6 +122,8 @@ void loop()
     mesh.send(payload4, base_id);
     Payload payload5(RELAY_2, states[RELAY_2]);
     mesh.send(payload5, base_id);
+
+    led_blink(LED_OFF, false);
   }
   
   // check button
@@ -140,7 +132,7 @@ void loop()
 
 /****************************************************************************/
 
-void led_blink(char led[20], bool blink) {
+void led_blink(char* led, bool blink) {
   // blinking
   if(blink && states[led]) {
     led = LED_OFF;
@@ -149,7 +141,7 @@ void led_blink(char led[20], bool blink) {
   states[LED_RED] = false;
   states[LED_GREEN] = false;
 
-  if( strcmp(led, LED_RED)==0 ) {
+  if(strcmp(led, LED_RED) == 0) {
     // initialize led pins
     pinMode(LEDREDPIN, OUTPUT);
     // enable red led
@@ -158,7 +150,7 @@ void led_blink(char led[20], bool blink) {
     // save state
     states[LED_RED] = true;
 
-  } else if( strcmp(led, LED_GREEN)==0 ) {
+  } else if(strcmp(led, LED_GREEN) == 0) {
     // initialize led pins
     pinMode(LEDGREENPIN, OUTPUT);
     // enable green led
@@ -181,9 +173,9 @@ void relay(char relay[20], int state) {
   pinMode(RELAY1PIN, OUTPUT);
   pinMode(RELAY2PIN, OUTPUT);
   // turn on/off
-  if( strcmp(relay, RELAY_1)==0 ) {
+  if(strcmp(relay, RELAY_1) == 0) {
     digitalWrite(RELAY1PIN, state);
-  } else if( strcmp(relay, RELAY_2)==0 ) {
+  } else if(strcmp(relay, RELAY_2) == 0) {
     digitalWrite(RELAY2PIN, state);
   } else {
     printf("RELAY: Error: '%s' is unknown!\n\r", relay);

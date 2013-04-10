@@ -1,4 +1,3 @@
-
 #ifndef __ACS712_H__
 #define __ACS712_H__
 
@@ -29,7 +28,7 @@ public:
     amperage = delta * 20.48;
 
     if(ACSLIB_DEBUG) printf("ACS712: Info: Sensor: %u, Delta: %d, Amperage: %d.\n\r", 
-                sensor, delta, amperage);
+                        sensor, delta, amperage);
     return ACSLIB_OK;
   };
 

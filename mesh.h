@@ -4,6 +4,8 @@
 
 #include <SPI.h>
 #include "RF24Network.h"
+#include "HashMap.h"
+#include "timer.h"
 
 /**
  * Payload which is sent as main message
@@ -131,14 +133,14 @@ private:
   uint16_t node_address; /**< Logical node address of this unit */
   uint16_t node_id; /**< Node id of this unit */
   uint8_t channel; /**< The RF channel to operate on (0-127) */
+  HashMap<uint16_t, uint16_t, 10> nodes; /**< HashMap that pairs id to address and can hold number pairs. */
   const static uint16_t base = 00; /**< Base address */
   const static uint16_t homeless = 05; /**< homeless address is last address in the network */
-  const static uint16_t interval = 10000; /**< Delay manager in ms */
-  unsigned long last_time_sent; /** time's stamp when last message was sent */
-  bool connection_ready; /**< connection state */
+  timer_t send_timer(10000); /**< Delay manager in ms */
+  bool ready_to_send; /**< connection state */
 
   /**
-  * Send message with type P, send Ping request.
+  * Send message with type P, send Ping.
   * Send ping to base.
   */
   bool send_P();
@@ -150,13 +152,13 @@ private:
   void handle_P(RF24NetworkHeader& header);
 
   /**
-  * Send message with type A, send new Address node request.
-  * Request new address from base
+  * Send message with type A, message with Address.
+  * Request for re-init with new address
   */
   bool send_A(const uint16_t new_address);
 
   /**
-  * Handle message with type A, handle new Address node request.
+  * Handle message with type A, handle new Address request.
   * Reinitialize node with new address from message.
   */
   void handle_A(RF24NetworkHeader& header);
