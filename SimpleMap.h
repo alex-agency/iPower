@@ -1,5 +1,6 @@
-#include <iostream>
-using namespace std;
+
+#ifndef SIMPLEMAP_H
+#define SIMPLEMAP_H
 
 template<typename K>
 struct defcmp
@@ -13,26 +14,46 @@ template<typename K, typename V, int capacity, typename comparator = defcmp<K> >
 class SimpleMap
 {
   public:
+    /**
+     * Initialize map
+     */
     SimpleMap() {
       currentIndex = 0;
     }
 
+    /**
+     * Get the size of this map
+     */
     unsigned int size() const {
       return currentIndex;
     }
 
+    /**
+     * Get a key at a specified index
+     */
     K keyAt(unsigned int idx) {
       return keys[idx];
     }
 
+    /**
+     * Get a value at a specified index
+     */
     V valueAt(unsigned int idx) {
       return values[idx];
     }
 
+    /**
+     * Check if a new assignment will overflow this map
+     */
     bool willOverflow() {
       return (currentIndex + 1 > capacity);
     }
 
+    /**
+     * An indexer for accessing and assigning a value to a key
+     * If a key is used that exists, it returns the value for that key
+     * If there exists no value for that key, the key is added
+     */
     V& operator[](const K& key) {
       if ( contains(key) ) {
         return values[indexOf(key)];
@@ -46,6 +67,9 @@ class SimpleMap
       return nil;
     }
 
+    /**
+     * Get the index of a key
+     */
     unsigned int indexOf(K key) {
       for (int i = 0; i < currentIndex; i++) {
         if ( cmp(key, keys[i]) ) {
@@ -55,6 +79,9 @@ class SimpleMap
       return -1;
     }
 
+    /**
+     * Check if a key is contained within this map
+     */
     bool contains(K key) {
       for (int i = 0; i < currentIndex; i++) {
         if ( cmp(key, keys[i]) ) {
@@ -64,6 +91,9 @@ class SimpleMap
       return false;
     }
 
+    /**
+     * Check if a key is contained within this map
+     */
     void remove(K key) {
       int index = indexOf(key);
       if ( contains(key) ) {
@@ -92,7 +122,7 @@ class SimpleMap
       return buffer; 
     }
 
-  protected:
+  private:
     K keys[capacity];
     V values[capacity];
     V nil;
@@ -100,26 +130,5 @@ class SimpleMap
     comparator cmp;
 };
 
-typedef const char * string_ptr; 
-struct comparator
-{
-  bool operator()(string_ptr& a, string_ptr& b) {
-    return strcmp(a, b) == 0;
-  }
-};
-
-int main()
-{
-   SimpleMap<int,int,5> test;
-   SimpleMap<const char*,int,5, comparator> states;
-
-   test[2] = 11;
-   states["a"] = 10;
-   
-   //std::cout << test.toString();
-   cout << states.toString(); 
-   cout << states["a"];
-   cout << test[2];
-
-   return 0;
-}
+#endif
+// SIMPLEMAP_H

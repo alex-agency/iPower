@@ -4,7 +4,7 @@
 #include "RF24.h"
 #include "Mesh.h"
 #include "dht11.h"
-#include "HashMap.h"
+#include "SimpleMap.h"
 #include "acs712.h"
 #include "button.h"
 #include "timer.h"
@@ -58,12 +58,11 @@ const uint16_t base_id = 00;
 
 // Declare state map
 struct comparator {
-  bool operator()(const char* &a, const char* &b) const {
-    return strcmp(a, b) == 0;
+  bool operator()(const char* &str1, const char* &str2) {
+    return strcmp(str1, str2) == 0;
   }
 };
-CreateComplexHashMap(states, const char*, uint8_t, 8, comparator);
-//CreateHashMap(states,const char*,uint8_t,8);
+SimpleMap<const char*, int, 8, comparator> states;
 
 // Declare delay manager in ms
 timer_t send_timer(5000);
