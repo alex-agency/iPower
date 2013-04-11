@@ -136,7 +136,7 @@ private:
   HashMap<uint16_t, uint16_t, 10> nodes; /**< HashMap that pairs id to address and can hold number pairs. */
   const static uint16_t base = 00; /**< Base address */
   const static uint16_t homeless = 05; /**< homeless address is last address in the network */
-  timer_t send_timer(10000); /**< Delay manager in ms */
+  //timer_t send_timer(10000); /**< Delay manager in ms */
   bool ready_to_send; /**< connection state */
 
   /**

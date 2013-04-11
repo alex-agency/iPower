@@ -114,7 +114,7 @@ void Mesh::update()
   
   ////////// Sleping.......
   
-  if ( send_timer() ) {
+  if ( true ) {//send_timer() ) {
     // is it homeless?
     if(node_address == homeless) {
       //send ping to base
@@ -268,7 +268,7 @@ void Mesh::reset_node()
     nodes.remove(index);
   }
   // change connection state
-  connection_ready = false;
+  ready_to_send = false;
   // set as homeless
   node_address = homeless;
   if(DEBUG) printf("MESH: Info: %u, 0%o: Node is flashed.\n\r", 

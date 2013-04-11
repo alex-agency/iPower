@@ -45,7 +45,7 @@ public:
     // 4: counting push
     byte last_button_state;
     int wait = 3000;
-    long last_pushed = millis();
+    unsigned long last_pushed = millis();
     while(millis() < wait+last_pushed) {
       // read button
       byte state = digitalRead(button_pin);
@@ -53,7 +53,7 @@ public:
       if(state != last_button_state && state != HIGH) {
         digitalWrite(led2_pin, HIGH);
         command++;
-        if(BUTTONLIB_DEBUG) printf("BUTTON: Info: %d push after %d msec.\n\r",
+        if(BUTTONLIB_DEBUG) printf("BUTTON: Info: %d push after %lu msec.\n\r",
                                 command, millis()-last_pushed);
         delay(250);
       }

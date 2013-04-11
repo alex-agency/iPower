@@ -57,7 +57,13 @@ const uint16_t base_id = 00;
 #define AMPERAGE  "amperage"
 
 // Declare state map
-CreateComplexHashMap(states, char*, char*, 7, strcmp);
+struct comparator {
+  bool operator()(const char* &a, const char* &b) const {
+    return strcmp(a, b) == 0;
+  }
+};
+CreateComplexHashMap(states, const char*, uint8_t, 8, comparator);
+//CreateHashMap(states,const char*,uint8_t,8);
 
 // Declare delay manager in ms
 timer_t send_timer(5000);
@@ -101,7 +107,7 @@ void loop()
 
   ///// Slepping....
 
-  if( mesh.ready() && send_timer() ) {
+  if( mesh.ready() && send_timer ) {
 
     led_blink(LED_GREEN, false);
     
@@ -132,7 +138,7 @@ void loop()
 
 /****************************************************************************/
 
-void led_blink(char* led, bool blink) {
+void led_blink(const char* led, bool blink) {
   // blinking
   if(blink && states[led]) {
     led = LED_OFF;
@@ -168,7 +174,7 @@ void led_blink(char* led, bool blink) {
 
 /****************************************************************************/
 
-void relay(char relay[20], int state) {
+void relay(const char* relay, int state) {
   // initialize relays pin
   pinMode(RELAY1PIN, OUTPUT);
   pinMode(RELAY2PIN, OUTPUT);
