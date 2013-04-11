@@ -1,0 +1,125 @@
+#include <iostream>
+using namespace std;
+
+template<typename K>
+struct defcmp
+{
+  bool operator()(const K& k1, const K& k2) {
+    return k1 == k2;
+  }
+};
+
+template<typename K, typename V, int capacity, typename comparator = defcmp<K> >
+class SimpleMap
+{
+  public:
+    SimpleMap() {
+      currentIndex = 0;
+    }
+
+    unsigned int size() const {
+      return currentIndex;
+    }
+
+    K keyAt(unsigned int idx) {
+      return keys[idx];
+    }
+
+    V valueAt(unsigned int idx) {
+      return values[idx];
+    }
+
+    bool willOverflow() {
+      return (currentIndex + 1 > capacity);
+    }
+
+    V& operator[](const K& key) {
+      if ( contains(key) ) {
+        return values[indexOf(key)];
+      }
+      else if (currentIndex < capacity) {
+        keys[currentIndex] = key;
+        values[currentIndex] = nil;
+        currentIndex++;
+        return values[currentIndex - 1];
+      }
+      return nil;
+    }
+
+    unsigned int indexOf(K key) {
+      for (int i = 0; i < currentIndex; i++) {
+        if ( cmp(key, keys[i]) ) {
+          return i;
+        }
+      }
+      return -1;
+    }
+
+    bool contains(K key) {
+      for (int i = 0; i < currentIndex; i++) {
+        if ( cmp(key, keys[i]) ) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    void remove(K key) {
+      int index = indexOf(key);
+      if ( contains(key) ) {
+        for (int i = index; i < capacity - 1; i++) {
+          keys[i] = keys[i + 1];
+          values[i] = values[i + 1];
+        }
+        currentIndex--;
+      }
+    }
+
+    void setNullValue(V nullv) {
+      nil = nullv;
+    }
+
+    const char* toString() const {
+      static char buffer[128];
+      strcpy(buffer, "{");
+      for(int i=0; i<currentIndex; i++) {
+        if (i > 0) {
+          strcat(buffer, ", ");
+        }
+        sprintf(buffer,"%s%s=%d", buffer, keys[i], values[i]); 
+      }
+      strcat(buffer, "}");
+      return buffer; 
+    }
+
+  protected:
+    K keys[capacity];
+    V values[capacity];
+    V nil;
+    int currentIndex;
+    comparator cmp;
+};
+
+typedef const char * string_ptr; 
+struct comparator
+{
+  bool operator()(string_ptr& a, string_ptr& b) {
+    return strcmp(a, b) == 0;
+  }
+};
+
+int main()
+{
+   SimpleMap<int,int,5> test;
+   SimpleMap<const char*,int,5, comparator> states;
+
+   test[2] = 11;
+   states["a"] = 10;
+   
+   //std::cout << test.toString();
+   cout << states.toString(); 
+   cout << states["a"];
+   cout << test[2];
+
+   return 0;
+}
