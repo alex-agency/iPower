@@ -1,6 +1,5 @@
-
-#ifndef SIMPLEMAP_H
-#define SIMPLEMAP_H
+#include <iostream>
+using namespace std;
 
 template<typename K>
 struct defcmp
@@ -130,5 +129,30 @@ class SimpleMap
     comparator cmp;
 };
 
-#endif
-// SIMPLEMAP_H
+   struct comparator {
+    bool operator()(const char* &str1, const char* &str2) {
+      return strcmp(str1, str2) == 0;
+    }
+   };
+
+int main()
+{
+   SimpleMap<int, int, 5> nodes;
+
+   nodes[1001] = 05;
+   cout << nodes.toString()<<endl;
+
+   nodes[1001] = 01;
+   cout << nodes[1001]<<endl;
+
+   SimpleMap<const char*, int, 5, comparator> states;
+
+   states["temperature"] = 25;
+   states["humidity"] = 30;
+   states["relay 1"] = true;
+
+   cout << states.toString()<<endl;
+   cout << states["humidity"]<<endl;
+
+   return 0;
+}

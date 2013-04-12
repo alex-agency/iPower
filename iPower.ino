@@ -9,6 +9,7 @@
 #include "acs712.h"
 #include "button.h"
 #include "timer.h"
+//#include "sleep.h"
 
 // Declare SPI bus pins
 #define CE_PIN  9
@@ -68,6 +69,13 @@ SimpleMap<const char*, int, 8, comparator> states;
 // Declare delay manager in ms
 timer_t send_timer(1000);
 
+// Sleep constants.  In this example, the watchdog timer wakes up
+// every 4s, and every single wakeup we power up the radio and send
+// a reading.  In real use, these numbers which be much higher.
+// Try wdt_8s and 7 cycles for one reading per minute.> 1
+//const wdt_prescalar_e wdt_prescalar = wdt_4s;
+//const int sleep_cycles_per_transmission = 1;
+
 // Debug info.
 const bool DEBUG = true;
 
@@ -84,6 +92,9 @@ void setup()
   radio.begin();
   // initialize network
   mesh.begin(channel, node_id);
+
+  // Configure sleep
+  //Sleep.begin(wdt_prescalar,sleep_cycles_per_transmission);
 }
 
 //
@@ -108,7 +119,18 @@ void loop()
     //  relay(payload.key, RELAY_OFF);
   }
   
-  ///// Slepping....
+  // sleeping
+  //if (Sleep) {
+    // Power down the radio.  Note that the radio will get powered back up
+    // on the next write() call.
+  //  radio.powerDown();
+    // Be sure to flush the serial first before sleeping, so everything
+    // gets printed properly
+  //  Serial.flush();
+    // Sleep the MCU.  The watchdog timer will awaken in a short while, and
+    // continue execution here.
+  //  Sleep.go();
+  //}
 
   if( mesh.ready() && send_timer ) {
     led_blink(LED_GREEN, false);
