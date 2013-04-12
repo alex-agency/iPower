@@ -1,6 +1,10 @@
 
 #include "Mesh.h"
 #include "RF24.h"
+#include "timer.h"
+
+// Delay manager in ms
+timer_t ping_timer(10000);
 
 // Debug info
 const bool DEBUG = true;
@@ -12,7 +16,7 @@ Mesh::Mesh( RF24& _radio ): radio(_radio), network(radio) {}
 /****************************************************************************/
 
 void Mesh::begin(uint8_t _channel, uint16_t _node_id)
-{
+{  
   // save settings
   node_id = _node_id;
   channel = _channel;
@@ -114,7 +118,7 @@ void Mesh::update()
   
   ////////// Sleping.......
   
-  if ( true ) {//send_timer() ) {
+  if ( ping_timer ) {
     // is it homeless?
     if(node_address == homeless) {
       //send ping to base

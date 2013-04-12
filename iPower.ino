@@ -107,7 +107,6 @@ void loop()
   ///// Slepping....
 
   if( mesh.ready() && send_timer ) {
-
     led_blink(LED_GREEN, false);
     
     // send DHT11 sensor values
@@ -154,8 +153,8 @@ void led_blink(const char* led, bool blink) {
     digitalWrite(LEDGREENPIN, LOW);
     // save state
     states[LED_RED] = true;
-
-  } else if(strcmp(led, LED_GREEN) == 0) {
+  } 
+  else if(strcmp(led, LED_GREEN) == 0) {
     // initialize led pins
     pinMode(LEDGREENPIN, OUTPUT);
     // enable green led
@@ -163,8 +162,8 @@ void led_blink(const char* led, bool blink) {
     digitalWrite(LEDREDPIN, LOW);
     // save state
     states[LED_GREEN] = true;
-    
-  } else {
+  } 
+  else {
     // disable leds
     digitalWrite(LEDREDPIN, LOW);
     digitalWrite(LEDGREENPIN, LOW);
@@ -180,9 +179,11 @@ void relay(const char* relay, int state) {
   // turn on/off
   if(strcmp(relay, RELAY_1) == 0) {
     digitalWrite(RELAY1PIN, state);
-  } else if(strcmp(relay, RELAY_2) == 0) {
+  } 
+  else if(strcmp(relay, RELAY_2) == 0) {
     digitalWrite(RELAY2PIN, state);
-  } else {
+  } 
+  else {
     printf("RELAY: Error: '%s' is unknown!\n\r", relay);
     return;
   }
@@ -190,7 +191,8 @@ void relay(const char* relay, int state) {
   if(state == RELAY_ON) {
     if(DEBUG) printf("RELAY: Info: %s is enabled.\n\r", relay);
     states[relay] = true;
-  } else if(state == RELAY_OFF) {
+  } 
+  else if(state == RELAY_OFF) {
     if(DEBUG) printf("RELAY: Info: %s is disabled.\n\r", relay);
     states[relay] = false;
   }
@@ -204,7 +206,8 @@ bool handle_button() {
   int state = BUTTON.read(BUTTONPIN, LEDGREENPIN, LEDREDPIN);
   if(state == BUTTONLIB_RELEASE) {
     return false;
-  } else if(state != BUTTONLIB_OK) {
+  } 
+  else if(state != BUTTONLIB_OK) {
     printf("BUTTON: Error: Incorrect push! It's too short or long.\n\r");
     return false;
   }

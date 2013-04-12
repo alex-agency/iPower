@@ -1,6 +1,8 @@
 #ifndef _BUTTON_H__
 #define _BUTTON_H__
 
+#include "timer.h"
+
 #define BUTTONLIB_OK  1
 #define BUTTONLIB_RELEASE  0
 #define BUTTONLIB_ERROR_SHORT_START  -1
@@ -44,17 +46,16 @@ public:
     }
     // 4: counting push
     byte last_button_state;
-    int wait = 3000;
-    unsigned long last_pushed = millis();
-    while(millis() < wait+last_pushed) {
+    // Delay manager in ms
+    timer_t timer(3000);
+    while(timer) {
       // read button
       byte state = digitalRead(button_pin);
       // check for changing state from release to push
       if(state != last_button_state && state != HIGH) {
         digitalWrite(led2_pin, HIGH);
         command++;
-        if(BUTTONLIB_DEBUG) printf("BUTTON: Info: %d push after %lu msec.\n\r",
-                                command, millis()-last_pushed);
+        if(BUTTONLIB_DEBUG) printf("BUTTON: Info: %d push.\n\r", command);
         delay(250);
       }
       digitalWrite(led2_pin, LOW);
