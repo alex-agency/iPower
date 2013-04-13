@@ -35,8 +35,8 @@ const uint16_t base_id = 00;
 #define LEDREDPIN  6
 #define LEDGREENPIN  5
 // Declare state map keys
-#define LED_RED  "red led"
-#define LED_GREEN  "green led"
+#define LED_RED  "red_led"
+#define LED_GREEN  "green_led"
 // Declare state value
 #define LED_OFF  0
 
@@ -44,8 +44,8 @@ const uint16_t base_id = 00;
 #define RELAY1PIN  7
 #define RELAY2PIN  8
 // Declare state map keys
-#define RELAY_1  "relay 1"
-#define RELAY_2  "relay 2"
+#define RELAY_1  "relay_1"
+#define RELAY_2  "relay_2"
 // Declare state map values
 #define RELAY_OFF  1
 #define RELAY_ON  0
@@ -67,7 +67,7 @@ struct comparator {
 SimpleMap<const char*, int, 8, comparator> states;
 
 // Declare delay manager in ms
-timer_t send_timer(1000);
+timer_t send_timer(60000);
 
 // Sleep constants.  In this example, the watchdog timer wakes up
 // every 4s, and every single wakeup we power up the radio and send
@@ -102,22 +102,18 @@ void setup()
 //
 void loop()
 {
-  // update network
-  mesh.update();
+  // check button
+  handle_button();
   
-  // is new payload message available?
-  while( mesh.available() ) {
-    Payload payload;
-    mesh.read(payload);
-    
-    if(payload.value)
-      relay(payload.key, RELAY_ON);
-    else if(payload.value == false)
-      relay(payload.key, RELAY_OFF);
-  }
+  // enable warning led if power on 
+  if(states[RELAY_1] || states[RELAY_2])
+     led_blink(LED_RED, false);
+  else
+     led_blink(LED_OFF, false);
   
   // sleeping
   //if (Sleep) {
+  //  if(DEBUG) printf("SLEEP: Info: Go to Sleep.\n\r");
     // Power down the radio.  Note that the radio will get powered back up
     // on the next write() call.
   //  radio.powerDown();
@@ -127,8 +123,9 @@ void loop()
     // Sleep the MCU.  The watchdog timer will awaken in a short while, and
     // continue execution here.
   //  Sleep.go();
+  //  if(DEBUG) printf("SLEEP: Info: WakeUp\n\r");
   //}
-
+  
   if( mesh.ready() && send_timer ) {
     led_blink(LED_GREEN, false);
         
@@ -153,8 +150,19 @@ void loop()
     led_blink(LED_OFF, false);
   }
   
-  // check button
-  handle_button();
+  // update network
+  mesh.update();
+  
+  // is new payload message available?
+  while( mesh.available() ) {
+    Payload payload;
+    mesh.read(payload);
+    
+    if(payload.value)
+      relay(payload.key, RELAY_ON);
+    else if(payload.value == false)
+      relay(payload.key, RELAY_OFF);
+  }
 }
 
 /****************************************************************************/
@@ -237,12 +245,10 @@ bool handle_button() {
   // handle command
   switch (BUTTON.command) {
     case 1:
-      led_blink(LED_RED, false);
       // turning ON relay #1
       relay(RELAY_1, RELAY_ON);
       return true;
     case 2:
-      led_blink(LED_RED, false);
       // turning ON relay #2
       relay(RELAY_2, RELAY_ON);
       return true;
@@ -250,7 +256,6 @@ bool handle_button() {
       // turning OFF relay #1 and #2
       relay(RELAY_1, RELAY_OFF);
       relay(RELAY_2, RELAY_OFF);
-      led_blink(LED_OFF, false);
       return true;
     default:
       return false;

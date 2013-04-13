@@ -4,7 +4,7 @@
 #include "timer.h"
 
 // Delay manager in ms
-timer_t ping_timer(10000);
+timer_t ping_timer(30000);
 
 // Debug info
 const bool DEBUG = true;
@@ -64,6 +64,8 @@ bool Mesh::send(Payload& payload, uint16_t to_id)
     if(DEBUG) printf_P(PSTR(" failed!\n\r"));
     // delete bad node
     nodes.remove(to_id);
+    if(DEBUG) printf_P(PSTR("MESH: Info: %u: Node '%u' id is removed from address map!: %s.\n\r"), 
+                node_id, to_id, nodes.toString());
     if(nodes.size() == 0)
       ready_to_send = false;
     return false;
@@ -115,9 +117,7 @@ void Mesh::update()
         break;
     };
   }
-  
-  ////////// Sleping.......
-  
+    
   if ( ping_timer ) {
     // is it homeless?
     if(node_address == homeless) {
