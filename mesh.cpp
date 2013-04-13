@@ -7,7 +7,7 @@
 timer_t ping_timer(30000);
 
 // Debug info
-const bool DEBUG = true;
+const bool DEBUG = false;
 
 /****************************************************************************/
 
@@ -52,7 +52,7 @@ bool Mesh::send(Payload& payload, uint16_t to_id)
   // get destination address
   uint16_t to_address = nodes[to_id];
   RF24NetworkHeader header(to_address, 'M');
-  if(DEBUG) printf_P(PSTR("MESH: Info: %u, %s, %d byte: Sending payload to %d: %s..."), 
+  if(DEBUG) printf_P(PSTR("MESH: Info: %u, %s, %d byte: Sending payload to %u: %s..."), 
               node_id, header.toString(), sizeof(payload), to_id, payload.toString());
               
   bool ok = network.write(header,&payload,sizeof(payload));
@@ -273,6 +273,9 @@ void Mesh::reset_node()
   }
   // change connection state
   ready_to_send = false;
+  // exit if node already homeless
+  if(node_address == homeless)
+    return;
   // set as homeless
   node_address = homeless;
   if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Node is flashed.\n\r"), 
