@@ -105,18 +105,15 @@ void loop()
   // update network
   mesh.update();
   
-  // is new pauload message available?
+  // is new payload message available?
   while( mesh.available() ) {
-    
-    printf("mesh.available()\n\r");
-    delay(2000);
     Payload payload;
-    //mesh.read(payload);
+    mesh.read(payload);
     
-    //if(payload.value)
-    //  relay(payload.key, RELAY_ON);
-    //else if(payload.value == false)
-    //  relay(payload.key, RELAY_OFF);
+    if(payload.value)
+      relay(payload.key, RELAY_ON);
+    else if(payload.value == false)
+      relay(payload.key, RELAY_OFF);
   }
   
   // sleeping
@@ -137,21 +134,21 @@ void loop()
         
     // send DHT11 sensor values
     read_DHT11();
-  //  Payload payload1(HUMIDITY, states[HUMIDITY]);
-  //  mesh.send(payload1, base_id);
-  //  Payload payload2(TEMPERATURE, states[TEMPERATURE]);
-  //  mesh.send(payload2, base_id);
+    Payload payload1(HUMIDITY, states[HUMIDITY]);
+    mesh.send(payload1, base_id);
+    Payload payload2(TEMPERATURE, states[TEMPERATURE]);
+    mesh.send(payload2, base_id);
     
     // send ACS712 sensor value
     read_ACS712();
-  //  Payload payload3(AMPERAGE, states[AMPERAGE]);
-  //  mesh.send(payload3, base_id);
+    Payload payload3(AMPERAGE, states[AMPERAGE]);
+    mesh.send(payload3, base_id);
 
     // send relays state
-  //  Payload payload4(RELAY_1, states[RELAY_1]);
-  //  mesh.send(payload4, base_id);
-  //  Payload payload5(RELAY_2, states[RELAY_2]);
-  //  mesh.send(payload5, base_id);
+    Payload payload4(RELAY_1, states[RELAY_1]);
+    mesh.send(payload4, base_id);
+    Payload payload5(RELAY_2, states[RELAY_2]);
+    mesh.send(payload5, base_id);
 
     led_blink(LED_OFF, false);
   }
