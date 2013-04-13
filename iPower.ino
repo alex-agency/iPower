@@ -271,8 +271,13 @@ bool read_DHT11() {
     case DHTLIB_OK:
       states[HUMIDITY] = DHT11.humidity;
       states[TEMPERATURE] = DHT11.temperature;
+      // correction sensor after heating power supply
+      if(states[RELAY_1] || states[RELAY_2]) {
+        states[HUMIDITY] = states[HUMIDITY] + 4;
+        states[TEMPERATURE] = states[TEMPERATURE] - 7;
+      }
       if(DEBUG) printf("DHT11: Info: Sensor values: humidity: %d, temperature: %d.\n\r", 
-                          states[HUMIDITY], states[TEMPERATURE]);
+                  states[HUMIDITY], states[TEMPERATURE]);
       return true;
     case DHTLIB_ERROR_CHECKSUM:
       printf("DHT11: Error: Checksum test failed!: The data may be incorrect!\n\r");

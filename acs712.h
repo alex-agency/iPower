@@ -2,7 +2,7 @@
 #define __ACS712_H__
 
 #define ACSLIB_OK  0
-#define ACSLIB_DEBUG  false
+#define ACSLIB_DEBUG  true
 
 const int sensitivity = 200;
 uint16_t shift = 512;
@@ -18,7 +18,7 @@ public:
     // read sensor
     uint16_t sensor = analogReadAccuracy(pin, sensitivity);
     // shifting zero for calibrate
-    if(sensor > 500 && sensor < 524) {
+    if(sensor > 509 && sensor < 515) {
       shift = sensor;
     }
     // calculate
