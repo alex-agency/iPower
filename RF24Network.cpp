@@ -74,7 +74,9 @@ void RF24Network::update(void)
 	continue;
 
       // Is this for us?
-      if ( header.to_node == node_address )
+      if ( header.to_node == node_address || 
+        // accept messages from broadcast address
+        (header.to_node == 0x5555 && header.from_node != header.to_node) )
 	// Add it to the buffer of frames for us
 	enqueue();
       else

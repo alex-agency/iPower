@@ -54,7 +54,6 @@ struct Payload
  *
  * Currently MESH is not working correct!
  * We can't send message from 05555 node to 00 base!
- * Currently this network could have only 4 leaf node. (01-04)
  *
  * leaf node   -> base node
  * 01-05       -> 00
@@ -133,13 +132,13 @@ private:
   uint16_t node_id; /**< Node id of this unit */
   uint8_t channel; /**< The RF channel to operate on (0-127) */
   SimpleMap<uint16_t, uint16_t, 10> nodes; /**< Map that pairs id to address and can hold number pairs. */
-  const static uint16_t base = 00; /**< Base address */
-  const static uint16_t homeless = 05; /**< homeless address is last address in the network */
+  const static uint16_t base = 0x0; /**< Base address */
+  const static uint16_t broadcast = 0x5555; /**< broadcast address is last address in the network */
   bool ready_to_send; /**< connection state */
 
   /**
   * Send message with type P, send Ping.
-  * Send ping to base.
+  * Send ping to broadcast address.
   */
   bool send_P();
 
@@ -163,11 +162,8 @@ private:
 
   /**
   * Find empty node address
-  * 
-  * @param relay_address Find inside this relay branch,
-  * 	by default finding in the root
   */
-  uint16_t get_new_address(uint16_t relay_address);
+  uint16_t get_leaf_address();
 
   /**
   * Reinitialize node with new address, 
