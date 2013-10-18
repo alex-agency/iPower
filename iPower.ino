@@ -67,7 +67,12 @@ struct comparator {
 SimpleMap<const char*, int, 8, comparator> states;
 
 // Declare delay manager in ms
-timer_t send_timer(60000);
+timer_t timer(60000);
+
+// Declare critical state
+const warm_temp = 40;
+const warm_humid = 80;
+const warm_amp = 8000;
 
 // Sleep constants.  In this example, the watchdog timer wakes up
 // every 4s, and every single wakeup we power up the radio and send
@@ -77,7 +82,7 @@ timer_t send_timer(60000);
 //const int sleep_cycles_per_transmission = 1;
 
 // Debug info.
-const bool DEBUG = true;
+const bool DEBUG = false;
 
 //
 // Setup
@@ -125,29 +130,48 @@ void loop()
   //  Sleep.go();
   //  if(DEBUG) printf("SLEEP: Info: WakeUp\n\r");
   //}
-  
-  if( mesh.ready() && send_timer ) {
-    led_blink(LED_GREEN, false);
-        
-    // send DHT11 sensor values
-    read_DHT11();
-    Payload payload1(HUMIDITY, states[HUMIDITY]);
-    mesh.send(payload1, base_id);
-    Payload payload2(TEMPERATURE, states[TEMPERATURE]);
-    mesh.send(payload2, base_id);
-    
-    // send ACS712 sensor value
-    read_ACS712();
-    Payload payload3(AMPERAGE, states[AMPERAGE]);
-    mesh.send(payload3, base_id);
 
-    // send relays state
-    Payload payload4(RELAY_1, states[RELAY_1]);
-    mesh.send(payload4, base_id);
-    Payload payload5(RELAY_2, states[RELAY_2]);
-    mesh.send(payload5, base_id);
+  if(timer) {
+  	// reading sensors
+  	read_DHT11();
+  	read_ACS712();
 
-    led_blink(LED_OFF, false);
+  	// checking for critical state
+  	if(states[TEMPERATURE]>=warm_temp ||
+  	   states[HUMIDITY]>=warm_humid || 
+  	   states[AMPERAGE]>=warm_amp) {
+  		printf("WARNING: Device sensors found critical value!");
+  		printf(" Device power will be shut down!\n\r");
+  		// power off
+  		relay(RELAY_1, RELAY_OFF);
+      	relay(RELAY_2, RELAY_OFF);
+      	printf("WARNING: Temperature: %d, Humidity: %d, Amperage: %d",
+      		states[TEMPERATURE], states[HUMIDITY], states[AMPERAGE]);
+      	led_blink(LED_RED, true);
+  	}
+
+  	// if network ready send values to base
+	if( mesh.ready() ) {
+		led_blink(LED_GREEN, false);
+		    
+		// send DHT11 sensor values
+		Payload payload1(HUMIDITY, states[HUMIDITY]);
+		mesh.send(payload1, base_id);
+		Payload payload2(TEMPERATURE, states[TEMPERATURE]);
+		mesh.send(payload2, base_id);
+
+		// send ACS712 sensor value
+		Payload payload3(AMPERAGE, states[AMPERAGE]);
+		mesh.send(payload3, base_id);
+
+		// send relays state
+		Payload payload4(RELAY_1, states[RELAY_1]);
+		mesh.send(payload4, base_id);
+		Payload payload5(RELAY_2, states[RELAY_2]);
+		mesh.send(payload5, base_id);
+
+		led_blink(LED_OFF, false);
+	}
   }
   
   // update network
