@@ -171,6 +171,7 @@ private:
   uint16_t parent_node; /**< Our parent's node address */
   uint8_t parent_pipe; /**< The pipe our parent uses to listen to us */
   uint16_t node_mask; /**< The bits which contain signfificant node address information */
+  const static uint16_t broadcast = 05555; /**< broadcast address is last address in the network */
 };
 
 /**

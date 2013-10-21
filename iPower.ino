@@ -21,7 +21,7 @@ Mesh mesh(radio);
 // Declare radio channel 0-127
 const uint8_t channel = 76;
 // Declare unique node id
-const uint16_t node_id = 03;
+const uint16_t node_id = 111;
 // Declare base id, base always has 00 id
 const uint16_t base_id = 00;
 

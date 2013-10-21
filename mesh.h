@@ -132,8 +132,9 @@ private:
   uint16_t node_id; /**< Node id of this unit */
   uint8_t channel; /**< The RF channel to operate on (0-127) */
   SimpleMap<uint16_t, uint16_t, 10> nodes; /**< Map that pairs id to address and can hold number pairs. */
-  const static uint16_t base = 0x0; /**< Base address */
-  const static uint16_t broadcast = 0x5555; /**< broadcast address is last address in the network */
+  const static uint16_t base = 00; /**< Base address */
+  const static uint16_t broadcast = 05555; /**< broadcast address is last address in the network */
+  const static uint16_t homeless = 05551; /**< homeless adress 05551-05554 are reserved for broadcaster */
   bool ready_to_send; /**< connection state */
 
   /**
@@ -152,7 +153,7 @@ private:
   * Send message with type A, message with Address.
   * Request for re-init with new address
   */
-  bool send_A(const uint16_t new_address);
+  bool send_A(const uint16_t to_address, const uint16_t new_address);
 
   /**
   * Handle message with type A, handle new Address request.

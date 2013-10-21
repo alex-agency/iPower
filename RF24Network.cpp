@@ -39,7 +39,9 @@ void RF24Network::begin(uint8_t _channel, uint16_t _node_address )
   setup_address();
   
   // Open up all listening pipes
-  int i = 6;
+  int i = 5;
+  // Open one pipe for broadcasting
+  radio.openReadingPipe(i,pipe_address(broadcast,i));
   while (i--)
     radio.openReadingPipe(i,pipe_address(_node_address,i));
   radio.startListening();
@@ -73,10 +75,12 @@ void RF24Network::update(void)
       if ( !is_valid_address(header.to_node) )
 	continue;
 
+      // Throw it away if it's sent to himself
+      if( header.from_node == header.to_node )
+  continue;
+
       // Is this for us?
-      if ( header.to_node == node_address || 
-        // accept messages from broadcast address
-        (header.to_node == 0x5555 && header.from_node != header.to_node) )
+      if ( header.to_node == node_address || header.to_node == broadcast )
 	// Add it to the buffer of frames for us
 	enqueue();
       else

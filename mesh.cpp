@@ -24,9 +24,9 @@ void Mesh::begin(uint8_t _channel, uint16_t _node_id)
   if( node_id == base ) {
     node_address = base;
   }
-  // otherwise it is broadcast
+  // otherwise it is homeless
   else {
-    node_address = broadcast;
+    node_address = homeless;
   }
   if(DEBUG) printf_P(PSTR("MESH: Info: Initializing Node: id: %u, address: 0%o.\n\r"),
               node_id, node_address);
@@ -51,7 +51,7 @@ bool Mesh::send(Payload& payload, uint16_t to_id)
   }
   // get destination address
   uint16_t to_address = nodes[to_id];
-  RF24NetworkHeader header(to_address, 'M');
+  RF24NetworkHeader header(to_address, 'M'); header.from_node = node_address;
   if(DEBUG) printf_P(PSTR("MESH: Info: %u, %s, %d byte: Sending payload to %u: %s..."), 
               node_id, header.toString(), sizeof(payload), to_id, payload.toString());
               
@@ -120,7 +120,7 @@ void Mesh::update()
     
   if ( ping_timer ) {
     // is it broadcaster?
-    if(node_address == broadcast) {
+    if(node_address == homeless) {
       //Broadcast ping
       send_P();
     }
@@ -158,7 +158,7 @@ void Mesh::read(Payload& payload)
 
 bool Mesh::send_P()
 {
-  RF24NetworkHeader header(broadcast, 'P');
+  RF24NetworkHeader header(broadcast, 'P'); header.from_node = node_address; 
   if(DEBUG) printf_P(PSTR("MESH: Info: %u, %s, %d byte: Broadcast ping..."), 
               node_id, header.toString(), sizeof(node_id));
   bool ok = network.write(header,&node_id,sizeof(node_id));
@@ -178,8 +178,13 @@ void Mesh::handle_P(RF24NetworkHeader& header)
   uint8_t received = network.read(header,&id,sizeof(id));
   if(DEBUG) printf_P(PSTR("MESH: Info: %u, %s, %d byte: Received ping from %d.\n\r"),
               node_id, header.toString(), received, id);
+  // is it our ping?
+  if(node_id == id) {
+    // skip if it ours.
+    return;
+  }
   // who send ping?
-  if(header.from_node == broadcast) {
+  if(header.from_node >= homeless) {
     uint16_t leaf_address;
     // do we known this node?
     if(nodes.contains(id)) {
@@ -188,11 +193,9 @@ void Mesh::handle_P(RF24NetworkHeader& header)
       // find empty address for new leaf
       leaf_address = get_leaf_address();
     }
-
-    if(leaf_address != broadcast) {
-      // send new address to broadcaster
-      send_A(leaf_address);
-    }
+    
+    // send new address to broadcaster
+    send_A(header.from_node, leaf_address);
     return;
   }
   // if node isn't broadcaster we should add its to our network
@@ -206,9 +209,9 @@ void Mesh::handle_P(RF24NetworkHeader& header)
 
 /****************************************************************************/
 
-bool Mesh::send_A(const uint16_t leaf_address)
+bool Mesh::send_A(const uint16_t to_address, const uint16_t leaf_address)
 {
-  RF24NetworkHeader header(broadcast, 'A');
+  RF24NetworkHeader header(to_address, 'A'); header.from_node = node_address;
   if(DEBUG) printf_P(PSTR("MESH: Info: %u, %s, %d byte: Sending new leaf address '0%o'.\n\r"), 
               node_id, header.toString(), sizeof(leaf_address), leaf_address);
   return network.write(header,&leaf_address,sizeof(leaf_address));
@@ -230,25 +233,19 @@ void Mesh::handle_A(RF24NetworkHeader& header)
 
 uint16_t Mesh::get_leaf_address()
 {
-  node_address
-
   // find next after relay empty address
   bool exists = false;
-  for(uint16_t address = relay + 1; address < homeless; address++) {
+  for(uint16_t address = node_address+1; address < node_address+5; address++) {
     for(int index = 0; index < nodes.size(); index++) {
       if(nodes.valueAt(index) == address) {
          exists = true;
       }
     }
     if(exists == false) {
-      return address;
+      return 03;
     }
   }
-
-
-
-
-  return broadcast;
+  return 03;
 }
 
 /****************************************************************************/
@@ -282,15 +279,16 @@ void Mesh::reset_node()
   }
   // change connection state
   ready_to_send = false;
-  // exit if node already broadcast
-  if(node_address == broadcast)
-    return;
-  // set as broadcast
-  node_address = broadcast;
+  // set as homeless
+  if(node_address >= homeless && node_address != broadcast-1) {
+    node_address++;
+  } else {
+    node_address = homeless;
+  }
   if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Node is flashed.\n\r"), 
               node_id, node_address);
   // reinitialize node
-  network.begin(channel, broadcast);
+  network.begin(channel, node_address);
 }
 
 /****************************************************************************/
