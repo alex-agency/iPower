@@ -21,7 +21,7 @@ Mesh mesh(radio);
 // Declare radio channel 0-127
 const uint8_t channel = 76;
 // Declare unique node id
-const uint16_t node_id = 1001;
+const uint16_t node_id = 03;
 // Declare base id, base always has 00 id
 const uint16_t base_id = 00;
 
@@ -41,8 +41,8 @@ const uint16_t base_id = 00;
 #define LED_OFF  0
 
 // Declare relays digital pins
-#define RELAY1PIN  7
-#define RELAY2PIN  8
+#define RELAY1PIN  8
+#define RELAY2PIN  7
 // Declare state map keys
 #define RELAY_1  "relay_1"
 #define RELAY_2  "relay_2"
@@ -67,12 +67,12 @@ struct comparator {
 SimpleMap<const char*, int, 8, comparator> states;
 
 // Declare delay manager in ms
-timer_t timer(60000);
+timer_t timer(30000);
 
 // Declare critical state
-const warm_temp = 40;
-const warm_humid = 80;
-const warm_amp = 8000;
+const int warm_temp = 40;
+const int warm_humid = 80;
+const int warm_amp = 8000;
 
 // Sleep constants.  In this example, the watchdog timer wakes up
 // every 4s, and every single wakeup we power up the radio and send
@@ -140,37 +140,39 @@ void loop()
   	if(states[TEMPERATURE]>=warm_temp ||
   	   states[HUMIDITY]>=warm_humid || 
   	   states[AMPERAGE]>=warm_amp) {
-  		printf("WARNING: Device sensors found critical value!");
-  		printf(" Device power will be shut down!\n\r");
-  		// power off
-  		relay(RELAY_1, RELAY_OFF);
-      	relay(RELAY_2, RELAY_OFF);
-      	printf("WARNING: Temperature: %d, Humidity: %d, Amperage: %d",
+          
+          printf("WARNING: Device sensors found critical value!");
+  	  printf(" Device power will be shut down!\n\r");
+  	  // power off
+  	  relay(RELAY_1, RELAY_OFF);
+      	  relay(RELAY_2, RELAY_OFF);
+      	  printf("WARNING: Temperature: %d, Humidity: %d, Amperage: %d\n\r",
       		states[TEMPERATURE], states[HUMIDITY], states[AMPERAGE]);
-      	led_blink(LED_RED, true);
+      	  
+          led_blink(LED_RED, true);
   	}
 
   	// if network ready send values to base
 	if( mesh.ready() ) {
-		led_blink(LED_GREEN, false);
+          led_blink(LED_GREEN, false);
 		    
-		// send DHT11 sensor values
-		Payload payload1(HUMIDITY, states[HUMIDITY]);
-		mesh.send(payload1, base_id);
-		Payload payload2(TEMPERATURE, states[TEMPERATURE]);
-		mesh.send(payload2, base_id);
+	  // send DHT11 sensor values
+	  Payload payload1(HUMIDITY, states[HUMIDITY]);
+	  mesh.send(payload1, base_id);
+	  Payload payload2(TEMPERATURE, states[TEMPERATURE]);
+	  mesh.send(payload2, base_id);
 
-		// send ACS712 sensor value
-		Payload payload3(AMPERAGE, states[AMPERAGE]);
-		mesh.send(payload3, base_id);
+	  // send ACS712 sensor value
+	  Payload payload3(AMPERAGE, states[AMPERAGE]);
+	  mesh.send(payload3, base_id);
 
-		// send relays state
-		Payload payload4(RELAY_1, states[RELAY_1]);
-		mesh.send(payload4, base_id);
-		Payload payload5(RELAY_2, states[RELAY_2]);
-		mesh.send(payload5, base_id);
-
-		led_blink(LED_OFF, false);
+          // send relays state
+          Payload payload4(RELAY_1, states[RELAY_1]);
+          mesh.send(payload4, base_id);
+          Payload payload5(RELAY_2, states[RELAY_2]);
+          mesh.send(payload5, base_id);
+        
+          led_blink(LED_OFF, false);
 	}
   }
   
@@ -234,9 +236,15 @@ void relay(const char* relay, int state) {
   // turn on/off
   if(strcmp(relay, RELAY_1) == 0) {
     digitalWrite(RELAY1PIN, state);
+    // !!!lack in principal scheme, 
+    //both relay should be enabled!
+    digitalWrite(RELAY2PIN, state);
   } 
   else if(strcmp(relay, RELAY_2) == 0) {
     digitalWrite(RELAY2PIN, state);
+    // !!!lack in principal scheme
+    //both relay should be enabled!
+    digitalWrite(RELAY1PIN, state);
   } 
   else {
     printf("RELAY: Error: '%s' is unknown!\n\r", relay);
@@ -295,11 +303,6 @@ bool read_DHT11() {
     case DHTLIB_OK:
       states[HUMIDITY] = DHT11.humidity;
       states[TEMPERATURE] = DHT11.temperature;
-      // correction sensor after heating power supply
-      if(states[RELAY_1] || states[RELAY_2]) {
-        states[HUMIDITY] = states[HUMIDITY] + 4;
-        states[TEMPERATURE] = states[TEMPERATURE] - 7;
-      }
       if(DEBUG) printf("DHT11: Info: Sensor values: humidity: %d, temperature: %d.\n\r", 
                   states[HUMIDITY], states[TEMPERATURE]);
       return true;
