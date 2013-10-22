@@ -49,6 +49,8 @@ bool Mesh::send(Payload& payload, uint16_t to_id)
     // we should know about this node
     return false;
   }
+  // set payload id from sender id
+  payload.id = node_id;
   // get destination address
   uint16_t to_address = nodes[to_id];
   RF24NetworkHeader header(to_address, 'M'); header.from_node = node_address;
@@ -81,7 +83,7 @@ bool Mesh::send(Payload& payload, uint16_t to_id)
 
 const char* Payload::toString() const {
   static char buffer[30];
-  snprintf_P(buffer,sizeof(buffer),PSTR("{%s=%d}"), key, value);
+  snprintf_P(buffer,sizeof(buffer),PSTR("%d {%s=%d}"), id, key, value);
   return buffer;   
 }
 
@@ -114,13 +116,15 @@ void Mesh::update()
         // Unknown message type
         // skip this message
         network.read(header,0,0);
+        printf_P(PSTR("MESH: Error: %u, %s: Unknown message type!\n\r"),
+                node_id, header.toString());
         break;
     };
   }
     
   if ( ping_timer ) {
     // is it broadcaster?
-    if(node_address == homeless) {
+    if(node_address >= homeless) {
       //Broadcast ping
       send_P();
     }
@@ -190,7 +194,7 @@ void Mesh::handle_P(RF24NetworkHeader& header)
     if(nodes.contains(id)) {
       leaf_address = nodes[id];
     } else {
-      // find empty address for new leaf
+      // find empty slot for new leaf
       leaf_address = get_leaf_address();
     }
     
@@ -233,19 +237,25 @@ void Mesh::handle_A(RF24NetworkHeader& header)
 
 uint16_t Mesh::get_leaf_address()
 {
-  // find next after relay empty address
   bool exists = false;
-  for(uint16_t address = node_address+1; address < node_address+5; address++) {
+  // shifting from 055 to 0550
+  uint16_t shift = node_address << 3; 
+  // check for available spaces
+  if(shift >= homeless)
+    return homeless;
+  // for node 052 will return 0521-0525
+  for(uint16_t address = shift+1; address <= shift+5; address++) {
     for(int index = 0; index < nodes.size(); index++) {
       if(nodes.valueAt(index) == address) {
          exists = true;
       }
     }
-    if(exists == false) {
-      return 03;
-    }
+    // we found empty slot
+    if(exists == false)
+      return address;
   }
-  return 03;
+  // nothing for this relay
+  return homeless;
 }
 
 /****************************************************************************/
@@ -279,7 +289,7 @@ void Mesh::reset_node()
   }
   // change connection state
   ready_to_send = false;
-  // set as homeless
+  // set address as homeless from reserved address
   if(node_address >= homeless && node_address != broadcast-1) {
     node_address++;
   } else {

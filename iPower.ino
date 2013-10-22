@@ -139,22 +139,22 @@ void loop()
   	// checking for critical state
   	if(states[TEMPERATURE]>=warm_temp ||
   	   states[HUMIDITY]>=warm_humid || 
-  	   states[AMPERAGE]>=warm_amp) {
-          
-          printf("WARNING: Device sensors found critical value!");
+  	   states[AMPERAGE]>=warm_amp) 
+  	{      
+      printf("WARNING: Device sensors found critical value!");
   	  printf(" Device power will be shut down!\n\r");
   	  // power off
   	  relay(RELAY_1, RELAY_OFF);
-      	  relay(RELAY_2, RELAY_OFF);
-      	  printf("WARNING: Temperature: %d, Humidity: %d, Amperage: %d\n\r",
-      		states[TEMPERATURE], states[HUMIDITY], states[AMPERAGE]);
+      relay(RELAY_2, RELAY_OFF);
+      printf("WARNING: Temperature: %d, Humidity: %d, Amperage: %d\n\r",
+      states[TEMPERATURE], states[HUMIDITY], states[AMPERAGE]);
       	  
-          led_blink(LED_RED, true);
+      led_blink(LED_RED, true);
   	}
 
   	// if network ready send values to base
 	if( mesh.ready() ) {
-          led_blink(LED_GREEN, false);
+      led_blink(LED_GREEN, false);
 		    
 	  // send DHT11 sensor values
 	  Payload payload1(HUMIDITY, states[HUMIDITY]);
@@ -166,13 +166,13 @@ void loop()
 	  Payload payload3(AMPERAGE, states[AMPERAGE]);
 	  mesh.send(payload3, base_id);
 
-          // send relays state
-          Payload payload4(RELAY_1, states[RELAY_1]);
-          mesh.send(payload4, base_id);
-          Payload payload5(RELAY_2, states[RELAY_2]);
-          mesh.send(payload5, base_id);
+      // send relays state
+      Payload payload4(RELAY_1, states[RELAY_1]);
+      mesh.send(payload4, base_id);
+      Payload payload5(RELAY_2, states[RELAY_2]);
+      mesh.send(payload5, base_id);
         
-          led_blink(LED_OFF, false);
+      led_blink(LED_OFF, false);
 	}
   }
   
@@ -184,10 +184,13 @@ void loop()
     Payload payload;
     mesh.read(payload);
     
-    if(payload.value)
-      relay(payload.key, RELAY_ON);
-    else if(payload.value == false)
-      relay(payload.key, RELAY_OFF);
+    if(payload.id == base_id) {
+	    
+	  if(payload.value)
+	    relay(payload.key, RELAY_ON);
+	  else if(payload.value == false)
+	    relay(payload.key, RELAY_OFF);    	
+    }
   }
 }
 

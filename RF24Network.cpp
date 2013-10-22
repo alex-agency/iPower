@@ -220,8 +220,8 @@ bool RF24Network::write(uint16_t to_node)
   // On which pipe
   uint8_t send_pipe = parent_pipe;
   
-  // If the node is a direct child,
-  if ( is_direct_child(to_node) )
+  // If the node is a direct child, or broadcast
+  if ( is_direct_child(to_node) || to_node == broadcast )
   {
     // Send directly
     send_node = to_node;

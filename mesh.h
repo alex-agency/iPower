@@ -14,8 +14,9 @@
  */
 struct Payload
 {
-    char key[20];
+    char key[16];
     int value;
+    int id;
 
     /**
      * Default constructor
