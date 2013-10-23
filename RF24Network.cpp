@@ -39,11 +39,12 @@ void RF24Network::begin(uint8_t _channel, uint16_t _node_address )
   setup_address();
   
   // Open up all listening pipes
-  int i = 5;
-  // Open one pipe for broadcasting
-  radio.openReadingPipe(i,pipe_address(broadcast,i));
+  int i = 6;
   while (i--)
     radio.openReadingPipe(i,pipe_address(_node_address,i));
+  // Open only pipe 0 for broadcasting
+  // radio have restriction that pipes 1-5 must share the top 32 bits
+  radio.openReadingPipe(0,pipe_address(broadcast,0));
   radio.startListening();
 
   // Spew debugging state about the radio
