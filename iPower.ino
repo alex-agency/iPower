@@ -184,6 +184,7 @@ void loop()
     Payload payload;
     mesh.read(payload);
     
+    // accept payload form base only
     if(payload.id == base_id) {
 	    
 	  if(payload.value)

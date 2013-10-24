@@ -135,7 +135,6 @@ private:
   SimpleMap<uint16_t, uint16_t, 10> nodes; /**< Map that pairs id to address and can hold number pairs. */
   const static uint16_t base = 00; /**< Base address */
   const static uint16_t broadcast = 05555; /**< broadcast address is last address in the network */
-  const static uint16_t homeless = 05551; /**< homeless adress 05551-05554 are reserved for broadcaster */
   bool ready_to_send; /**< connection state */
 
   /**

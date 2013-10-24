@@ -24,9 +24,9 @@ void Mesh::begin(uint8_t _channel, uint16_t _node_id)
   if( node_id == base ) {
     node_address = base;
   }
-  // otherwise it is homeless
+  // otherwise it is broadcast
   else {
-    node_address = homeless;
+    node_address = broadcast;
   }
   if(DEBUG) printf_P(PSTR("MESH: Info: Initializing Node: id: %u, address: 0%o.\n\r"),
               node_id, node_address);
@@ -124,7 +124,7 @@ void Mesh::update()
     
   if ( ping_timer ) {
     // is it broadcaster?
-    if(node_address >= homeless) {
+    if(node_address == broadcast) {
       //Broadcast ping
       send_P();
     }
@@ -188,7 +188,7 @@ void Mesh::handle_P(RF24NetworkHeader& header)
     return;
   }
   // who send ping?
-  if(header.from_node >= homeless) {
+  if(header.from_node == broadcast) {
     uint16_t leaf_address;
     // do we known this node?
     if(nodes.contains(id)) {
@@ -241,8 +241,8 @@ uint16_t Mesh::get_leaf_address()
   // shifting from 055 to 0550
   uint16_t shift = node_address << 3; 
   // check for available spaces
-  if(shift >= homeless)
-    return homeless;
+  if(shift >= broadcast)
+    return broadcast;
   // for node 052 will return 0521-0525
   for(uint16_t address = shift+1; address <= shift+5; address++) {
     for(int index = 0; index < nodes.size(); index++) {
@@ -255,7 +255,7 @@ uint16_t Mesh::get_leaf_address()
       return address;
   }
   // nothing for this relay
-  return homeless;
+  return broadcast;
 }
 
 /****************************************************************************/
@@ -289,12 +289,8 @@ void Mesh::reset_node()
   }
   // change connection state
   ready_to_send = false;
-  // set address as homeless from reserved address
-  if(node_address >= homeless && node_address != broadcast-1) {
-    node_address++;
-  } else {
-    node_address = homeless;
-  }
+  // set address as broadcast
+  node_address = broadcast;
   if(DEBUG) printf_P(PSTR("MESH: Info: %u, 0%o: Node is flashed.\n\r"), 
               node_id, node_address);
   // reinitialize node
