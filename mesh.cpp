@@ -7,7 +7,7 @@
 timer_t ping_timer(30000);
 
 // Debug info
-const bool DEBUG = true;
+const bool DEBUG = false;
 
 /****************************************************************************/
 
