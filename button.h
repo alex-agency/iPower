@@ -1,6 +1,8 @@
 #ifndef _BUTTON_H__
 #define _BUTTON_H__
 
+#include "led.h"
+
 #define BUTTONLIB_OK  1
 #define BUTTONLIB_RELEASE  0
 #define BUTTONLIB_ERROR_SHORT_START  -1
@@ -13,12 +15,9 @@ class button
 public:
   int command;
 
-  int read(int button_pin, int led1_pin, int led2_pin) {
+  int read(int button_pin, Led led) {
     // initialize button pin with internal pullup resistor
     pinMode(button_pin, INPUT_PULLUP);
-    // initialize led pins
-    pinMode(led1_pin, OUTPUT);
-    pinMode(led2_pin, OUTPUT);
     // reset last command
     command = 0;
     
@@ -27,16 +26,18 @@ public:
       return BUTTONLIB_RELEASE;
     }
     // 2: exit if first push shorter than 1 sec
-    digitalWrite(led1_pin, HIGH);
-    digitalWrite(led2_pin, LOW);
+    led.set(LED_RED);
+    led.update();
     delay(1000);
     if(digitalRead(button_pin) == HIGH) {
       // skip if it pushed by mistake
-      digitalWrite(led1_pin, LOW);
+      led.set(LED_OFF);
+      led.update();
       return BUTTONLIB_ERROR_SHORT_START;
     }
     // 3: exit if first push longer than 1,5 sec
-    digitalWrite(led1_pin, LOW);
+    led.set(LED_OFF);
+    led.update();
     delay(500);
     if(digitalRead(button_pin) != HIGH) {
       // skip if it pushed by mistake
@@ -51,13 +52,15 @@ public:
       byte state = digitalRead(button_pin);
       // check for changing state from release to push
       if(state != last_button_state && state != HIGH) {
-        digitalWrite(led2_pin, HIGH);
+        led.set(LED_RED);
+        led.update();
         command++;
         if(BUTTONLIB_DEBUG) printf("BUTTON: Info: %d push after %lu msec.\n\r",
                                 command, millis()-last_pushed);
         delay(250);
       }
-      digitalWrite(led2_pin, LOW);
+      led.set(LED_OFF);
+      led.update();
       last_button_state = state;
     }
     if(BUTTONLIB_DEBUG) printf("BUTTON: Info: Button is pushed: %d times.\n\r", 

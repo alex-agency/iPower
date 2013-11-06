@@ -9,6 +9,7 @@
 #include "acs712.h"
 #include "button.h"
 #include "timer.h"
+#include "led.h"
 //#include "sleep.h"
 
 // Declare SPI bus pins
@@ -31,14 +32,8 @@ const uint16_t base_id = 00;
 #define HUMIDITY  "humidity"
 #define TEMPERATURE  "temperature"
 
-// Declare LED digital pins
-#define LEDREDPIN  6
-#define LEDGREENPIN  5
-// Declare state map keys
-#define LED_RED  "red_led"
-#define LED_GREEN  "green_led"
-// Declare state value
-#define LED_OFF  0
+// Set up LED digital pins
+Led led(5, 6); // (green, red) 
 
 // Declare relays digital pins
 #define RELAY1PIN  8
@@ -112,9 +107,9 @@ void loop()
   
   // enable warning led if power on 
   if(states[RELAY_1] || states[RELAY_2])
-     led_blink(LED_RED, false);
+    led.set(LED_RED);
   else
-     led_blink(LED_OFF, false);
+    led.set(LED_OFF);
   
   // sleeping
   //if (Sleep) {
@@ -149,31 +144,29 @@ void loop()
       printf("WARNING: Temperature: %d, Humidity: %d, Amperage: %d\n\r",
       states[TEMPERATURE], states[HUMIDITY], states[AMPERAGE]);
       	  
-      led_blink(LED_RED, true);
+      led.set_blink(LED_RED, 5);
   	}
 
-  	// if network ready send values to base
-	if( mesh.ready() ) {
-      led_blink(LED_GREEN, false);
-		    
-	  // send DHT11 sensor values
-	  Payload payload1(HUMIDITY, states[HUMIDITY]);
-	  mesh.send(payload1, base_id);
-	  Payload payload2(TEMPERATURE, states[TEMPERATURE]);
-	  mesh.send(payload2, base_id);
+    	// if network ready send values to base
+  	if( mesh.ready() ) {
+      led.set(LED_GREEN);
+  		    
+  	  // send DHT11 sensor values
+  	  Payload payload1(HUMIDITY, states[HUMIDITY]);
+  	  mesh.send(payload1, base_id);
+  	  Payload payload2(TEMPERATURE, states[TEMPERATURE]);
+  	  mesh.send(payload2, base_id);
 
-	  // send ACS712 sensor value
-	  Payload payload3(AMPERAGE, states[AMPERAGE]);
-	  mesh.send(payload3, base_id);
+  	  // send ACS712 sensor value
+  	  Payload payload3(AMPERAGE, states[AMPERAGE]);
+  	  mesh.send(payload3, base_id);
 
       // send relays state
       Payload payload4(RELAY_1, states[RELAY_1]);
       mesh.send(payload4, base_id);
       Payload payload5(RELAY_2, states[RELAY_2]);
       mesh.send(payload5, base_id);
-        
-      led_blink(LED_OFF, false);
-	}
+  	}
   }
   
   // update network
@@ -193,42 +186,9 @@ void loop()
 	    relay(payload.key, RELAY_OFF);    	
     }
   }
-}
 
-/****************************************************************************/
-
-void led_blink(const char* led, bool blink) {
-  // blinking
-  if(blink && states[led]) {
-    led = LED_OFF;
-  }
-  // clear all states
-  states[LED_RED] = false;
-  states[LED_GREEN] = false;
-
-  if(strcmp(led, LED_RED) == 0) {
-    // initialize led pins
-    pinMode(LEDREDPIN, OUTPUT);
-    // enable red led
-    digitalWrite(LEDREDPIN, HIGH);
-    digitalWrite(LEDGREENPIN, LOW);
-    // save state
-    states[LED_RED] = true;
-  } 
-  else if(strcmp(led, LED_GREEN) == 0) {
-    // initialize led pins
-    pinMode(LEDGREENPIN, OUTPUT);
-    // enable green led
-    digitalWrite(LEDGREENPIN, HIGH);
-    digitalWrite(LEDREDPIN, LOW);
-    // save state
-    states[LED_GREEN] = true;
-  } 
-  else {
-    // disable leds
-    digitalWrite(LEDREDPIN, LOW);
-    digitalWrite(LEDGREENPIN, LOW);
-  }
+  // update led
+  led.update();
 }
 
 /****************************************************************************/
@@ -270,7 +230,7 @@ void relay(const char* relay, int state) {
 bool handle_button() {
   button BUTTON;
   //read button
-  int state = BUTTON.read(BUTTONPIN, LEDGREENPIN, LEDREDPIN);
+  int state = BUTTON.read(BUTTONPIN, led);
   if(state == BUTTONLIB_RELEASE) {
     return false;
   } 
