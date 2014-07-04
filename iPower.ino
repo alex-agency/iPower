@@ -17,13 +17,11 @@
 #define DEBUG
 
 // Declare output functions
-#ifdef DEBUG
-  static int serial_putchar(char c, FILE *) {
-    Serial.write(c);
-    return 0;
-  };
-  FILE serial_out = {0};
-#endif
+static int serial_putchar(char c, FILE *) {
+  Serial.write(c);
+  return 0;
+};
+FILE serial_out = {0};
 
 // Avoid spurious warnings
 #if ! defined( NATIVE ) && defined( ARDUINO )
@@ -93,11 +91,9 @@ const int warm_amp = 8000;
 void setup()
 {
   // Configure output
-  #ifdef DEBUG
-    Serial.begin(9600);
-    fdev_setup_stream(&serial_out, serial_putchar, NULL, _FDEV_SETUP_WRITE);
-    stdout = stderr = &serial_out;
-  #endif
+  Serial.begin(9600);
+  fdev_setup_stream(&serial_out, serial_putchar, NULL, _FDEV_SETUP_WRITE);
+  stdout = stderr = &serial_out;
 
   #ifdef DEBUG
     printf_P(PSTR("Free memory: %d bytes.\n\r"), freeMemory());
@@ -147,9 +143,11 @@ void loop()
       relayOff(RELAY_1);
       relayOff(RELAY_2);
       printf_P(PSTR("WARNING: Temperature: %d, Humidity: %d, Amperage: %d\n\r"),
-      states[COMPUTER_TEMP], states[HUMIDITY], states[AMPERAGE]);
-      	  
+      states[COMPUTER_TEMP], states[HUMIDITY], states[AMPERAGE]);   	  
       led.set_blink(LED_RED, 5);
+      // long sleep
+      Serial.flush();
+      LowPower.powerDown(SLEEP_8S, 8, ADC_OFF, BOD_OFF); 
   	}
     // if network ready send values to base
   	/*if( mesh.ready() ) {
@@ -196,14 +194,15 @@ void loop()
   // Power down the radio.  Note that the radio will get powered back up
   // on the next write() call.
   //radio.powerDown();
-  Serial.flush();
-  // set all pin to low with pullup.
-  //for(int i=1; i<=21; i++) {
-  //  pinMode(i, INPUT_PULLUP);
-  //  digitalWrite(i, LOW);
-  //}
+  #ifdef DEBUG
+    Serial.flush();
+  #endif
   // Enter power down state for X*X sec with ADC and BOD module disabled
-  LowPower.powerDown(SLEEP_120MS, 1, ADC_OFF, BOD_OFF);
+  if(states[RELAY_1] == false && states[RELAY_2] == false) {
+    LowPower.powerDown(SLEEP_1S, 1, ADC_OFF, BOD_OFF);
+  } else {
+    LowPower.powerDown(SLEEP_120MS, 1, ADC_OFF, BOD_OFF);
+  }
   #ifdef DEBUG
     printf_P(PSTR("SLEEP: Info: WakeUp\n\r"));
   #endif
