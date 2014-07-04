@@ -1,36 +1,57 @@
 // Import libraries
 #include <SPI.h>
-#include "printf.h"
-#include "nRF24L01.h"
-#include "RF24.h"
-#include "Mesh.h"
-#include "dht11.h"
+//#include "nRF24L01.h"
+//#include "RF24.h"
+//#include "Mesh.h"
+#include "DHT11.h"
 #include "SimpleMap.h"
 #include "acs712.h"
-#include "button.h"
 #include "timer.h"
 #include "led.h"
-//#include "sleep.h"
+#include "MemoryFree.h"
+#include "Watchdog.h"
+#include "OneButton.h"
+#include "LowPower.h"
+
+// debug console
+#define DEBUG
+
+// Declare output functions
+#ifdef DEBUG
+  static int serial_putchar(char c, FILE *) {
+    Serial.write(c);
+    return 0;
+  };
+  FILE serial_out = {0};
+#endif
+
+// Avoid spurious warnings
+#if ! defined( NATIVE ) && defined( ARDUINO )
+#undef PROGMEM
+#define PROGMEM __attribute__(( section(".progmem.data") ))
+#undef PSTR
+#define PSTR(s) (__extension__({static const char __c[] PROGMEM = (s); &__c[0];}))
+#endif
 
 // Declare SPI bus pins
-#define CE_PIN  9
-#define CS_PIN  10
+//#define CE_PIN  9
+//#define CS_PIN  10
 // Set up nRF24L01 radio
-RF24 radio(CE_PIN, CS_PIN);
+//RF24 radio(CE_PIN, CS_PIN);
 // Set up network
-Mesh mesh(radio);
+//Mesh mesh(radio);
 // Declare radio channel 0-127
-const uint8_t channel = 76;
+//const uint8_t channel = 76;
 // Declare unique node id
-const uint16_t node_id = 111;
+//const uint16_t node_id = 111;
 // Declare base id, base always has 00 id
-const uint16_t base_id = 00;
+//const uint16_t base_id = 00;
 
 // Declare DHT11 sensor digital pin
 #define DHT11PIN  3
 // Declare state map keys
 #define HUMIDITY  "humidity"
-#define TEMPERATURE  "temperature"
+#define COMPUTER_TEMP  "comp. temp" // temperature inside
 
 // Set up LED digital pins
 Led led(5, 6); // (green, red) 
@@ -41,12 +62,9 @@ Led led(5, 6); // (green, red)
 // Declare state map keys
 #define RELAY_1  "relay_1"
 #define RELAY_2  "relay_2"
-// Declare state map values
-#define RELAY_OFF  1
-#define RELAY_ON  0
 
-// Declare pushbutton digital pin
-#define BUTTONPIN  4
+// Declare push button
+OneButton button(4, true);
 
 // Declare ACS712 sensor analog pin
 #define ACS712PIN  A0
@@ -61,7 +79,7 @@ struct comparator {
 };
 SimpleMap<const char*, int, 8, comparator> states;
 
-// Declare delay manager in ms
+// Declare delay managers in ms
 timer_t timer(30000);
 
 // Declare critical state
@@ -69,32 +87,36 @@ const int warm_temp = 40;
 const int warm_humid = 80;
 const int warm_amp = 8000;
 
-// Sleep constants.  In this example, the watchdog timer wakes up
-// every 4s, and every single wakeup we power up the radio and send
-// a reading.  In real use, these numbers which be much higher.
-// Try wdt_8s and 7 cycles for one reading per minute.> 1
-//const wdt_prescalar_e wdt_prescalar = wdt_4s;
-//const int sleep_cycles_per_transmission = 1;
-
-// Debug info.
-const bool DEBUG = false;
-
 //
 // Setup
 //
 void setup()
 {
-  // Configure console
-  Serial.begin(57600);
-  printf_begin();
+  // Configure output
+  #ifdef DEBUG
+    Serial.begin(9600);
+    fdev_setup_stream(&serial_out, serial_putchar, NULL, _FDEV_SETUP_WRITE);
+    stdout = stderr = &serial_out;
+  #endif
+
+  #ifdef DEBUG
+    printf_P(PSTR("Free memory: %d bytes.\n\r"), freeMemory());
+  #endif
+  // prevent continiously restart
+  delay(500);
+  // restart if memory lower 512 bytes
+  softResetMem(512);
+  // restart after freezing for 8 sec
+  softResetTimeout();
 
   // initialize radio
-  radio.begin();
+  //radio.begin();
   // initialize network
-  mesh.begin(channel, node_id);
+  //mesh.begin(channel, node_id);
 
-  // Configure sleep
-  //Sleep.begin(wdt_prescalar,sleep_cycles_per_transmission);
+  // Configure button
+  button.attachClick( buttonClick );
+  button.attachLongPressStart( buttonLongPress );
 }
 
 //
@@ -102,184 +124,169 @@ void setup()
 //
 void loop()
 {
-  // check button
-  handle_button();
-  
+  // watchdog
+  heartbeat();
   // enable warning led if power on 
   if(states[RELAY_1] || states[RELAY_2])
     led.set(LED_RED);
   else
     led.set(LED_OFF);
-  
-  // sleeping
-  //if (Sleep) {
-  //  if(DEBUG) printf("SLEEP: Info: Go to Sleep.\n\r");
-    // Power down the radio.  Note that the radio will get powered back up
-    // on the next write() call.
-  //  radio.powerDown();
-    // Be sure to flush the serial first before sleeping, so everything
-    // gets printed properly
-  //  Serial.flush();
-    // Sleep the MCU.  The watchdog timer will awaken in a short while, and
-    // continue execution here.
-  //  Sleep.go();
-  //  if(DEBUG) printf("SLEEP: Info: WakeUp\n\r");
-  //}
 
   if(timer) {
   	// reading sensors
   	read_DHT11();
   	read_ACS712();
-
   	// checking for critical state
-  	if(states[TEMPERATURE]>=warm_temp ||
+  	if(states[COMPUTER_TEMP]>=warm_temp ||
   	   states[HUMIDITY]>=warm_humid || 
   	   states[AMPERAGE]>=warm_amp) 
   	{      
-      printf("WARNING: Device sensors found critical value!");
-  	  printf(" Device power will be shut down!\n\r");
+      printf_P(PSTR("WARNING: Device sensors found critical value!"));
+  	  printf_P(PSTR(" Device power will be shut down!\n\r"));
   	  // power off
-  	  relay(RELAY_1, RELAY_OFF);
-      relay(RELAY_2, RELAY_OFF);
-      printf("WARNING: Temperature: %d, Humidity: %d, Amperage: %d\n\r",
-      states[TEMPERATURE], states[HUMIDITY], states[AMPERAGE]);
+      relayOff(RELAY_1);
+      relayOff(RELAY_2);
+      printf_P(PSTR("WARNING: Temperature: %d, Humidity: %d, Amperage: %d\n\r"),
+      states[COMPUTER_TEMP], states[HUMIDITY], states[AMPERAGE]);
       	  
       led.set_blink(LED_RED, 5);
   	}
-
-    	// if network ready send values to base
-  	if( mesh.ready() ) {
-      led.set(LED_GREEN);
-  		    
+    // if network ready send values to base
+  	/*if( mesh.ready() ) {
+      led.set(LED_GREEN);	    
   	  // send DHT11 sensor values
   	  Payload payload1(HUMIDITY, states[HUMIDITY]);
   	  mesh.send(payload1, base_id);
-  	  Payload payload2(TEMPERATURE, states[TEMPERATURE]);
+  	  Payload payload2(COMPUTER_TEMP, states[COMPUTER_TEMP]);
   	  mesh.send(payload2, base_id);
-
   	  // send ACS712 sensor value
   	  Payload payload3(AMPERAGE, states[AMPERAGE]);
   	  mesh.send(payload3, base_id);
-
       // send relays state
       Payload payload4(RELAY_1, states[RELAY_1]);
       mesh.send(payload4, base_id);
       Payload payload5(RELAY_2, states[RELAY_2]);
       mesh.send(payload5, base_id);
-  	}
+  	}*/
   }
-  
   // update network
-  mesh.update();
-  
+  //mesh.update();
   // is new payload message available?
-  while( mesh.available() ) {
+  /*while( mesh.available() ) {
     Payload payload;
     mesh.read(payload);
-    
     // accept payload form base only
     if(payload.id == base_id) {
 	    
 	  if(payload.value)
-	    relay(payload.key, RELAY_ON);
+      relayOn(payload.key);
 	  else if(payload.value == false)
-	    relay(payload.key, RELAY_OFF);    	
+	    relayOff(payload.key);    	
     }
-  }
-
+  }*/
   // update led
   led.update();
+  // update push button
+  button.tick();
+  
+  // sleeping
+  #ifdef DEBUG
+    printf_P(PSTR("SLEEP: Info: Go to Sleep.\n\r"));
+  #endif
+  // Power down the radio.  Note that the radio will get powered back up
+  // on the next write() call.
+  //radio.powerDown();
+  Serial.flush();
+  // set all pin to low with pullup.
+  //for(int i=1; i<=21; i++) {
+  //  pinMode(i, INPUT_PULLUP);
+  //  digitalWrite(i, LOW);
+  //}
+  // Enter power down state for X*X sec with ADC and BOD module disabled
+  LowPower.powerDown(SLEEP_120MS, 1, ADC_OFF, BOD_OFF);
+  #ifdef DEBUG
+    printf_P(PSTR("SLEEP: Info: WakeUp\n\r"));
+  #endif
 }
 
 /****************************************************************************/
 
-void relay(const char* relay, int state) {
-  // initialize relays pin
-  pinMode(RELAY1PIN, OUTPUT);
-  pinMode(RELAY2PIN, OUTPUT);
-  // turn on/off
-  if(strcmp(relay, RELAY_1) == 0) {
-    digitalWrite(RELAY1PIN, state);
-    // !!!lack in principal scheme, 
-    //both relay should be enabled!
-    digitalWrite(RELAY2PIN, state);
-  } 
-  else if(strcmp(relay, RELAY_2) == 0) {
-    digitalWrite(RELAY2PIN, state);
-    // !!!lack in principal scheme
-    //both relay should be enabled!
-    digitalWrite(RELAY1PIN, state);
-  } 
-  else {
-    printf("RELAY: Error: '%s' is unknown!\n\r", relay);
+void relayOn(const char* relay) {
+  if(states[relay]) {
+    // relay is already on
     return;
   }
-  // save states
-  if(state == RELAY_ON) {
-    if(DEBUG) printf("RELAY: Info: %s is enabled.\n\r", relay);
+  bool status = relays(relay, 0); // 0 is ON
+  if(status) {
+    #ifdef DEBUG
+      printf_P(PSTR("RELAY: Info: '%s' is enabled.\n\r"), relay);
+    #endif
     states[relay] = true;
-  } 
-  else if(state == RELAY_OFF) {
-    if(DEBUG) printf("RELAY: Info: %s is disabled.\n\r", relay);
+  }
+}
+
+void relayOff(const char* relay) {
+  if(states[relay] == false) {
+    // relay is already off
+    return;
+  }
+  bool status = relays(relay, 1); // 1 is OFF
+  if(status) {
+    #ifdef DEBUG
+      printf_P(PSTR("RELAY: Info: '%s' is disabled.\n\r"), relay);
+    #endif
     states[relay] = false;
   }
 }
 
+bool relays(const char* relay, uint8_t state) {
+  if(strcmp(relay, RELAY_1) == 0) {
+    pinMode(RELAY1PIN, OUTPUT);
+    digitalWrite(RELAY1PIN, state);
+    return true;
+  } 
+  if(strcmp(relay, RELAY_2) == 0) {
+    pinMode(RELAY2PIN, OUTPUT);
+    digitalWrite(RELAY2PIN, state);
+    return true;
+  } 
+  printf_P(PSTR("RELAY: Error: '%s' is unknown!\n\r"), relay);
+  return false;
+}
+
 /****************************************************************************/
 
-bool handle_button() {
-  button BUTTON;
-  //read button
-  int state = BUTTON.read(BUTTONPIN, led);
-  if(state == BUTTONLIB_RELEASE) {
-    return false;
-  } 
-  else if(state != BUTTONLIB_OK) {
-    printf("BUTTON: Error: Incorrect push! It's too short or long.\n\r");
-    return false;
-  }
-  // handle command
-  switch (BUTTON.command) {
-    case 1:
-      // turning ON relay #1
-      relay(RELAY_1, RELAY_ON);
-      return true;
-    case 2:
-      // turning ON relay #2
-      relay(RELAY_2, RELAY_ON);
-      return true;
-    case 3:
-      // turning OFF relay #1 and #2
-      relay(RELAY_1, RELAY_OFF);
-      relay(RELAY_2, RELAY_OFF);
-      return true;
-    default:
-      return false;
-  }
+void buttonClick() {
+  #ifdef DEBUG
+    printf_P(PSTR("BUTTON: Info: Short click.\n\r"));
+  #endif
+  relayOff(RELAY_1);
+  relayOff(RELAY_2);
+}
+
+void buttonLongPress() {
+  #ifdef DEBUG
+    printf_P(PSTR("BUTTON: Info: Long press.\n\r"));
+  #endif
+  relayOn(RELAY_1);
+  relayOn(RELAY_2);
 }
 
 /****************************************************************************/
 
 bool read_DHT11() {
   dht11 DHT11;
-  int state = DHT11.read(DHT11PIN);
-  switch (state) {
-    case DHTLIB_OK:
-      states[HUMIDITY] = DHT11.humidity;
-      states[TEMPERATURE] = DHT11.temperature;
-      if(DEBUG) printf("DHT11: Info: Sensor values: humidity: %d, temperature: %d.\n\r", 
-                  states[HUMIDITY], states[TEMPERATURE]);
-      return true;
-    case DHTLIB_ERROR_CHECKSUM:
-      printf("DHT11: Error: Checksum test failed!: The data may be incorrect!\n\r");
-      return false;
-    case DHTLIB_ERROR_TIMEOUT: 
-      printf("DHT11: Error: Timeout occured!: Communication failed!\n\r");
-      return false;
-    default: 
-      printf("DHT11: Error: Unknown error!\n\r");
-      return false;
+  if( DHT11.read(DHT11PIN) == DHTLIB_OK ) {
+    states[HUMIDITY] = DHT11.humidity;
+    states[COMPUTER_TEMP] = DHT11.temperature;
+    #ifdef DEBUG
+      printf_P(PSTR("DHT11: Info: Air humidity: %d, temperature: %dC.\n\r"), 
+        states[HUMIDITY], states[COMPUTER_TEMP]);
+    #endif
+    return true;
   }
+  printf_P(PSTR("DHT11: Error: Communication failed!\n\r"));
+  return false;
 }
 
 /****************************************************************************/
@@ -290,8 +297,10 @@ bool read_ACS712() {
   switch (state) {
     case ACSLIB_OK:
       states[AMPERAGE] = ACS712.amperage;
-      if(DEBUG) printf("ACS712: Info: Sensor value: amperage: %d.\n\r", 
+      #ifdef DEBUG
+        printf_P(PSTR("ACS712: Info: Sensor value: amperage: %d.\n\r"), 
                           states[AMPERAGE]);
+      #endif
       return true;
     default: 
       printf("ACS712: Error: Unknown error!\n\r");

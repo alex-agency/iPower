@@ -2,6 +2,16 @@
 #ifndef SIMPLEMAP_H
 #define SIMPLEMAP_H
 
+#include <string.h>
+
+// Avoid spurious warnings
+#if ! defined( NATIVE ) && defined( ARDUINO )
+#undef PROGMEM
+#define PROGMEM __attribute__(( section(".progmem.data") ))
+#undef PSTR
+#define PSTR(s) (__extension__({static const char __c[] PROGMEM = (s); &__c[0];}))
+#endif
+
 template<typename K>
 struct defcmp
 {
@@ -10,7 +20,7 @@ struct defcmp
   }
 };
 
-template<typename K, typename V, int capacity, typename comparator = defcmp<K> >
+template<typename K, typename V, uint8_t capacity, typename comparator = defcmp<K> >
 class SimpleMap
 {
   public:
@@ -24,21 +34,21 @@ class SimpleMap
     /**
      * Get the size of this map
      */
-    unsigned int size() const {
+    uint8_t size() const {
       return currentIndex;
     }
 
     /**
      * Get a key at a specified index
      */
-    K keyAt(unsigned int idx) {
+    K keyAt(uint8_t idx) {
       return keys[idx];
     }
 
     /**
      * Get a value at a specified index
      */
-    V valueAt(unsigned int idx) {
+    V valueAt(uint8_t idx) {
       return values[idx];
     }
 
@@ -97,7 +107,7 @@ class SimpleMap
     void remove(K key) {
       int index = indexOf(key);
       if ( contains(key) ) {
-        for (int i = index; i < capacity - 1; i++) {
+        for (uint8_t i = index; i < capacity - 1; i++) {
           keys[i] = keys[i + 1];
           values[i] = values[i + 1];
         }
@@ -110,15 +120,15 @@ class SimpleMap
     }
 
     const char* toString() const {
-      static char buffer[128];
+      static char buffer[30];
       strcpy(buffer, "{");
-      for(int i=0; i<currentIndex; i++) {
+      for(uint8_t i=0; i<currentIndex; i++) {
         if (i > 0) {
-          strcat(buffer, ", ");
+          strcat(buffer, PSTR(", "));
         }
-        sprintf(buffer,"%s?=%d", buffer, values[i]); 
+        snprintf_P(buffer,sizeof(buffer),PSTR("%s?=%d"),buffer, values[i]);
       }
-      strcat(buffer, "}");
+      strcat(buffer, PSTR("}"));
       return buffer; 
     }
 
@@ -126,7 +136,7 @@ class SimpleMap
     K keys[capacity];
     V values[capacity];
     V nil;
-    int currentIndex;
+    uint8_t currentIndex;
     comparator cmp;
 };
 

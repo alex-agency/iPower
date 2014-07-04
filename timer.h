@@ -15,6 +15,12 @@
 // Library headers
 // Project headers
 
+#if ARDUINO < 100
+#include <WProgram.h>
+#else
+#include <Arduino.h>
+#endif
+
 /**
  * Simple timer 
  */
