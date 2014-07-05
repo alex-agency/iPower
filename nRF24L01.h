@@ -106,6 +106,8 @@
 #define R_RX_PL_WID   0x60
 #define R_RX_PAYLOAD  0x61
 #define W_TX_PAYLOAD  0xA0
+// MODIFICATO - aggiunto questo:
+#define W_TX_PAYLOAD_NOACK 0xB0
 #define W_ACK_PAYLOAD 0xA8
 #define FLUSH_TX      0xE1
 #define FLUSH_RX      0xE2

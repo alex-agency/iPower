@@ -1,8 +1,4 @@
 // Import libraries
-#include <SPI.h>
-//#include "nRF24L01.h"
-//#include "RF24.h"
-//#include "Mesh.h"
 #include "DHT11.h"
 #include "SimpleMap.h"
 #include "acs712.h"
@@ -12,6 +8,12 @@
 #include "Watchdog.h"
 #include "OneButton.h"
 #include "LowPower.h"
+#include "MeshNet.h"
+#include <SPI.h>
+#include "nRF24L01.h"
+#include "RF24.h"
+#include "printf.h"
+#include "RF24Layer2.h"
 
 // debug console
 //#define DEBUG
@@ -31,19 +33,35 @@ FILE serial_out = {0};
 #define PSTR(s) (__extension__({static const char __c[] PROGMEM = (s); &__c[0];}))
 #endif
 
+// DEVICE TYPE
+const uint32_t deviceType = 123;
+// DEVICE UNIQUE ID
+uint32_t deviceUniqueId = 394932;
+/** LAYER 2 DEPENDENT CODE **/
 // Declare SPI bus pins
-//#define CE_PIN  9
-//#define CS_PIN  10
+#define CE_PIN  9
+#define CS_PIN  10
 // Set up nRF24L01 radio
-//RF24 radio(CE_PIN, CS_PIN);
-// Set up network
-//Mesh mesh(radio);
-// Declare radio channel 0-127
-//const uint8_t channel = 76;
-// Declare unique node id
-//const uint16_t node_id = 111;
-// Declare base id, base always has 00 id
-//const uint16_t base_id = 00;
+RF24 radio(CE_PIN, CS_PIN);
+const uint8_t RF24_INTERFACE = 0;
+// The number of network interfaces that this device has
+const int NUM_INTERFACES = 1;
+// Pass a layer3 packet to the layer2
+int sendPacket(unsigned char* message, uint8_t len, uint8_t interface, uint8_t macAddress)
+{  
+    // Here should be called the layer2 function corresponding to interface
+    if(interface == RF24_INTERFACE){
+      rf24sendPacket(message, len, macAddress);
+      return 1;
+    }
+    return 0;
+}
+void onCommandReceived(uint8_t command, void* data, uint8_t dataLen)
+{
+  #ifdef DEBUG
+    printf_P(PSTR("onCommandReceived: %d, %d\n\r"), command, data);
+  #endif
+}
 
 // Declare DHT11 sensor digital pin
 #define DHT11PIN  3
@@ -108,9 +126,7 @@ void setup()
   softResetTimeout();
 
   // initialize radio
-  //radio.begin();
-  // initialize network
-  //mesh.begin(channel, node_id);
+  rf24init();
 
   // Configure button
   button.attachClick( buttonClick );
@@ -166,39 +182,10 @@ void loop()
       Serial.flush();
       LowPower.powerDown(SLEEP_8S, 8, ADC_OFF, BOD_OFF); 
   	}
-    // if network ready send values to base
-  	/*if( mesh.ready() ) {
-      led.set(LED_GREEN);	    
-  	  // send DHT11 sensor values
-  	  Payload payload1(HUMIDITY, states[HUMIDITY]);
-  	  mesh.send(payload1, base_id);
-  	  Payload payload2(COMPUTER_TEMP, states[COMPUTER_TEMP]);
-  	  mesh.send(payload2, base_id);
-  	  // send ACS712 sensor value
-  	  Payload payload3(AMPERAGE, states[AMPERAGE]);
-  	  mesh.send(payload3, base_id);
-      // send relays state
-      Payload payload4(RELAY_1, states[RELAY_1]);
-      mesh.send(payload4, base_id);
-      Payload payload5(RELAY_2, states[RELAY_2]);
-      mesh.send(payload5, base_id);
-  	}*/
   }
   // update network
-  //mesh.update();
-  // is new payload message available?
-  /*while( mesh.available() ) {
-    Payload payload;
-    mesh.read(payload);
-    // accept payload form base only
-    if(payload.id == base_id) {
-	    
-	  if(payload.value)
-      relayOn(payload.key);
-	  else if(payload.value == false)
-	    relayOff(payload.key);    	
-    }
-  }*/
+  rf24receive();
+
   // sleeping
   //#ifdef DEBUG
   //  printf_P(PSTR("SLEEP: Info: Go to Sleep.\n\r"));

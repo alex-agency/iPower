@@ -131,7 +131,8 @@ protected:
    * @param len Number of bytes to be sent
    * @return Current value of status register
    */
-  uint8_t write_payload(const void* buf, uint8_t len);
+  // MODIFICATO - aggiunto parametro bool noAck
+  uint8_t write_payload(const void* buf, uint8_t len, bool noAck);
 
   /**
    * Read the receive payload
@@ -278,6 +279,10 @@ public:
    * @param len Number of bytes to be sent
    * @return True if the payload was delivered successfully false if not
    */
+  // MODIFICATO - aggiunto parametro bool noAck
+  bool write( const void* buf, uint8_t len, bool noAck );
+  
+  // Questo lo aggiungo per compatibilità con la libreria originale
   bool write( const void* buf, uint8_t len );
 
   /**
@@ -426,6 +431,9 @@ public:
    * @see examples/pingpair_pl/pingpair_dyn.pde
    */
   void enableDynamicPayloads(void);
+  
+  // MODIFICATO
+  void enableDynamicAck(void);
 
   /**
    * Determine whether the hardware is an nRF24L01+ or not.
@@ -570,7 +578,8 @@ public:
    * @param len Number of bytes to be sent
    * @return True if the payload was delivered successfully false if not
    */
-  void startWrite( const void* buf, uint8_t len );
+  // MODIFICATO - aggiunto parametro bool noAck
+  void startWrite( const void* buf, uint8_t len, bool noAck );
 
   /**
    * Write an ack payload for the specified pipe

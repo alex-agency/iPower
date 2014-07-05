@@ -95,7 +95,8 @@ uint8_t RF24::write_register(uint8_t reg, uint8_t value)
 
 /****************************************************************************/
 
-uint8_t RF24::write_payload(const void* buf, uint8_t len)
+// MODIFICATO - aggiunto parametro bool noAck
+uint8_t RF24::write_payload(const void* buf, uint8_t len, bool noAck)
 {
   uint8_t status;
 
@@ -107,7 +108,11 @@ uint8_t RF24::write_payload(const void* buf, uint8_t len)
   //printf("[Writing %u bytes %u blanks]",data_len,blank_len);
   
   csn(LOW);
-  status = SPI.transfer( W_TX_PAYLOAD );
+  if(!noAck){
+      status = SPI.transfer( W_TX_PAYLOAD );
+  } else {
+      status = SPI.transfer( W_TX_PAYLOAD_NOACK );
+  }
   while ( data_len-- )
     SPI.transfer(*current++);
   while ( blank_len-- )
@@ -403,7 +408,11 @@ void RF24::startListening(void)
     write_register(RX_ADDR_P0, reinterpret_cast<const uint8_t*>(&pipe0_reading_address), 5);
 
   // Flush buffers
-  flush_rx();
+  
+  // MODIFICATO - commentato, non devo flusharlo perchè potrei avere ancora dei pacchetti ricevuti non letti
+  //flush_rx();
+  
+  // questo invece forse è meglio lasciarlo, perchè se dopo cambio gli indirizzi delle pipe mi sballa tutto
   flush_tx();
 
   // Go!
@@ -418,8 +427,9 @@ void RF24::startListening(void)
 void RF24::stopListening(void)
 {
   ce(LOW);
-  flush_tx();
-  flush_rx();
+  // MODIFICATO - penso che non abbia senso flushare niente quì
+  //flush_tx();
+  //flush_rx();
 }
 
 /****************************************************************************/
@@ -438,12 +448,13 @@ void RF24::powerUp(void)
 
 /******************************************************************/
 
-bool RF24::write( const void* buf, uint8_t len )
+// MODIFICATO - aggiunto parametro noAck
+bool RF24::write( const void* buf, uint8_t len, bool noAck )
 {
   bool result = false;
 
   // Begin the write
-  startWrite(buf,len);
+  startWrite(buf,len, noAck);
 
   // ------------
   // At this point we could return from a non-blocking write, and then call
@@ -494,24 +505,35 @@ bool RF24::write( const void* buf, uint8_t len )
 
   // Yay, we are done.
 
+  // MODIFICATO - non ha molto senso spegnerlo... meglio se si spegne solo quando lo voglio io esplicitamente
   // Power down
-  powerDown();
+  //powerDown();
 
+  // questo invece è meglio tenerlo perchè mi sa che se una trasmissione fallisce il pacchetto resta lì all'infinito finchè non lo flusho
   // Flush buffers (Is this a relic of past experimentation, and not needed anymore??)
   flush_tx();
 
   return result;
 }
+
 /****************************************************************************/
 
-void RF24::startWrite( const void* buf, uint8_t len )
+// Metodo messo per compatibilità con la libreria originale
+bool RF24::write( const void* buf, uint8_t len ){
+    return write(buf, len, false);
+}
+
+/****************************************************************************/
+
+// MODIFICATO - aggiunto parametro noAck
+void RF24::startWrite( const void* buf, uint8_t len, bool noAck )
 {
   // Transmitter power-up
   write_register(CONFIG, ( read_register(CONFIG) | _BV(PWR_UP) ) & ~_BV(PRIM_RX) );
   delayMicroseconds(150);
 
   // Send the payload
-  write_payload( buf, len );
+  write_payload( buf, len, noAck );
 
   // Allons!
   ce(HIGH);
@@ -569,6 +591,13 @@ bool RF24::available(uint8_t* pipe_num)
     {
       write_register(STATUS,_BV(TX_DS));
     }
+    
+    // MODIFICATO - controlla se il payload è più grande di 32 byte, se lo è va scartato il pacchetto e flushato tutto perchè è corrotto!!
+    if( getDynamicPayloadSize() > 32 ){
+        flush_rx();
+        return false;
+    }
+    
   }
 
   return result;
@@ -687,6 +716,19 @@ void RF24::enableDynamicPayloads(void)
   write_register(DYNPD,read_register(DYNPD) | _BV(DPL_P5) | _BV(DPL_P4) | _BV(DPL_P3) | _BV(DPL_P2) | _BV(DPL_P1) | _BV(DPL_P0));
 
   dynamic_payloads_enabled = true;
+}
+
+/****************************************************************************/
+
+// MODIFICATO - aggiunta funzione per abilitare il NO_ACK
+void RF24::enableDynamicAck(){
+
+    write_register(FEATURE, read_register(FEATURE) | _BV(EN_DYN_ACK) );
+    
+    if( ! read_register(FEATURE) ){
+        toggle_features();
+        write_register(FEATURE, read_register(FEATURE) | _BV(EN_DYN_ACK) );
+    }
 }
 
 /****************************************************************************/
