@@ -67,7 +67,9 @@ OneButton button(4, true);
 // Declare ACS712 sensor analog pin
 #define ACS712PIN  A0
 // Declare state map key
-#define AMPERAGE  "amperage"
+#define POWER  "power"
+// Declare object
+acs712 ACS712;
 
 // Declare state map
 struct comparator {
@@ -83,7 +85,7 @@ timer_t timer(30000);
 // Declare critical state
 const int warm_temp = 40;
 const int warm_humid = 80;
-const int warm_amp = 8000;
+const int warm_power = 2000;
 
 //
 // Setup
@@ -113,6 +115,11 @@ void setup()
   // Configure button
   button.attachClick( buttonClick );
   button.attachLongPressStart( buttonLongPress );
+
+  // initialize pin
+  pinMode(ACS712PIN, INPUT);
+  //Quiscent output voltage - the average voltage ACS712 shows with no load (0 A)
+  ACS712.determineVQ(ACS712PIN);
 }
 
 //
@@ -134,20 +141,26 @@ void loop()
     #endif
     // reading sensors
     read_DHT11();
-    read_ACS712();
+
+    states[POWER] = ACS712.readCurrent(ACS712PIN);
+    #ifdef DEBUG
+      printf_P(PSTR("ACS712: Info: Sensor value: power: %d.\n\r"), 
+        states[POWER]);
+    #endif
+
     // checking for critical state
     if(states[COMPUTER_TEMP]>=warm_temp ||
       states[HUMIDITY]>=warm_humid || 
-  	  states[AMPERAGE]>=warm_amp) 
+  	  states[POWER]>=warm_power) 
     {      
       printf_P(PSTR("WARNING: Device sensors found critical value!"));
   	  printf_P(PSTR(" Device power will be shut down!\n\r"));
   	  // power off
       relayOff(RELAY_1);
       relayOff(RELAY_2);
-      printf_P(PSTR("WARNING: Temperature: %d, Humidity: %d, Amperage: %d\n\r"),
-      states[COMPUTER_TEMP], states[HUMIDITY], states[AMPERAGE]);   	  
-      led.set_blink(LED_RED, 5);
+      printf_P(PSTR("WARNING: Temperature: %d, Humidity: %d, Power: %d\n\r"),
+      states[COMPUTER_TEMP], states[HUMIDITY], states[POWER]);   	  
+      //led.set_blink(LED_RED, 100);
       // long sleep
       printf_P(PSTR("SLEEP: Info: Go to long sleep.\n\r"));
       Serial.flush();
@@ -284,25 +297,6 @@ bool read_DHT11() {
   }
   printf_P(PSTR("DHT11: Error: Communication failed!\n\r"));
   return false;
-}
-
-/****************************************************************************/
-
-bool read_ACS712() {
-  acs712 ACS712;
-  int state = ACS712.read(ACS712PIN);
-  switch (state) {
-    case ACSLIB_OK:
-      states[AMPERAGE] = ACS712.amperage;
-      #ifdef DEBUG
-        printf_P(PSTR("ACS712: Info: Sensor value: amperage: %d.\n\r"), 
-                          states[AMPERAGE]);
-      #endif
-      return true;
-    default: 
-      printf("ACS712: Error: Unknown error!\n\r");
-      return false;
-  }
 }
 
 /****************************************************************************/
