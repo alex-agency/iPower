@@ -2,7 +2,8 @@
 #define __ACS712_H__
 
 #define ACSLIB_OK  0
-#define ACSLIB_DEBUG  true
+// debug console
+//#define DEBUG
 
 const int sensitivity = 10;
 
@@ -34,10 +35,15 @@ public:
     // 512 = 0A, 512*(5V/1024) = 2.5V
     // 1A = 100mV, 10A = 1V = (1V/5V)*1024 = 204.8
     // 1 = 10000mA/204.8 = 48,83 = 49mA
-    amperage = value * 49;
-    if(ACSLIB_DEBUG) printf("ACS712: Info: Delta: %d, Amperage: %d.\n\r", 
+    if(value < 2)
+      amperage = 0;
+    else
+      amperage = value * 49;
+    #ifdef DEBUG
+      printf_P(PSTR("ACS712: Info: Delta: %d, Amperage: %d.\n\r"), 
                         value, amperage);
-    Serial.println((amperage * 216.0) / 1000.0);
+    #endif
+    //Serial.println((amperage * 216.0) / 1000.0);
     return ACSLIB_OK;
   };
 };

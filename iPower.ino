@@ -14,7 +14,7 @@
 #include "LowPower.h"
 
 // debug console
-#define DEBUG
+//#define DEBUG
 
 // Declare output functions
 static int serial_putchar(char c, FILE *) {
@@ -129,14 +129,17 @@ void loop()
     led.set(LED_OFF);
 
   if(timer) {
-  	// reading sensors
-  	read_DHT11();
-  	read_ACS712();
-  	// checking for critical state
-  	if(states[COMPUTER_TEMP]>=warm_temp ||
-  	   states[HUMIDITY]>=warm_humid || 
-  	   states[AMPERAGE]>=warm_amp) 
-  	{      
+    #ifdef DEBUG
+      printf_P(PSTR("Free memory: %d bytes.\n\r"), freeMemory());
+    #endif
+    // reading sensors
+    read_DHT11();
+    read_ACS712();
+    // checking for critical state
+    if(states[COMPUTER_TEMP]>=warm_temp ||
+      states[HUMIDITY]>=warm_humid || 
+  	  states[AMPERAGE]>=warm_amp) 
+    {      
       printf_P(PSTR("WARNING: Device sensors found critical value!"));
   	  printf_P(PSTR(" Device power will be shut down!\n\r"));
   	  // power off
@@ -146,6 +149,7 @@ void loop()
       states[COMPUTER_TEMP], states[HUMIDITY], states[AMPERAGE]);   	  
       led.set_blink(LED_RED, 5);
       // long sleep
+      printf_P(PSTR("SLEEP: Info: Go to long sleep.\n\r"));
       Serial.flush();
       LowPower.powerDown(SLEEP_8S, 8, ADC_OFF, BOD_OFF); 
   	}
@@ -182,30 +186,23 @@ void loop()
 	    relayOff(payload.key);    	
     }
   }*/
+  // sleeping
+  //#ifdef DEBUG
+  //  printf_P(PSTR("SLEEP: Info: Go to Sleep.\n\r"));
+  //#endif
+  // Power down the radio.  Note that the radio will get powered back up
+  // on the next write() call.
+  //radio.powerDown();
+  //Serial.flush();
+  // Enter power down state for X*X sec with ADC and BOD module disabled
+  //LowPower.powerDown(SLEEP_30MS, 1, ADC_OFF, BOD_OFF);
+  //#ifdef DEBUG
+  //  printf_P(PSTR("SLEEP: Info: WakeUp\n\r"));
+  //#endif
   // update led
   led.update();
   // update push button
   button.tick();
-  
-  // sleeping
-  #ifdef DEBUG
-    printf_P(PSTR("SLEEP: Info: Go to Sleep.\n\r"));
-  #endif
-  // Power down the radio.  Note that the radio will get powered back up
-  // on the next write() call.
-  //radio.powerDown();
-  #ifdef DEBUG
-    Serial.flush();
-  #endif
-  // Enter power down state for X*X sec with ADC and BOD module disabled
-  if(states[RELAY_1] == false && states[RELAY_2] == false) {
-    LowPower.powerDown(SLEEP_1S, 1, ADC_OFF, BOD_OFF);
-  } else {
-    LowPower.powerDown(SLEEP_120MS, 1, ADC_OFF, BOD_OFF);
-  }
-  #ifdef DEBUG
-    printf_P(PSTR("SLEEP: Info: WakeUp\n\r"));
-  #endif
 }
 
 /****************************************************************************/
@@ -269,6 +266,7 @@ void buttonLongPress() {
   #endif
   relayOn(RELAY_1);
   relayOn(RELAY_2);
+  delay(500);
 }
 
 /****************************************************************************/

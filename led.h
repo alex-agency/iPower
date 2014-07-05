@@ -20,6 +20,8 @@ public:
 		// initialize led pins
     	pinMode(_pin_green, OUTPUT);
     	pinMode(_pin_red, OUTPUT);
+        blink_count = 0;
+        previous_state = state = 0;
 	};
 
 	void set_blink( int _state, int _blink_count ) {
