@@ -63,6 +63,8 @@ void onCommandReceived(uint8_t command, void* data, uint8_t dataLen)
   #endif
 }
 
+#define name  "iPower"
+
 // Declare DHT11 sensor digital pin
 #define DHT11PIN  3
 // Declare state map keys
@@ -184,11 +186,12 @@ void loop()
   	}
 
     // send data to base
-    sendCommand(COMPUTER_TEMP, (void*) &states[COMPUTER_TEMP], sizeof(states[COMPUTER_TEMP]));
-    sendCommand(HUMIDITY, (void*) &states[HUMIDITY], sizeof(states[HUMIDITY]));
-    sendCommand(POWER, (void*) &states[POWER], sizeof(states[POWER]));
-    sendCommand(RELAY_1, (void*) &states[RELAY_1], sizeof(states[RELAY_1]));
-    sendCommand(RELAY_2, (void*) &states[RELAY_2], sizeof(states[RELAY_2]));
+    sendCommand(1, (void*) &name, sizeof(name));
+    sendCommand(2, (void*) &states[COMPUTER_TEMP], sizeof(states[COMPUTER_TEMP]));
+    sendCommand(3, (void*) &states[HUMIDITY], sizeof(states[HUMIDITY]));
+    sendCommand(4, (void*) &states[POWER], sizeof(states[POWER]));
+    sendCommand(5, (void*) &states[RELAY_1], sizeof(states[RELAY_1]));
+    sendCommand(6, (void*) &states[RELAY_2], sizeof(states[RELAY_2]));
   }
   // update network
   rf24receive();
