@@ -138,8 +138,8 @@ Una rete è formata da una o più basi, e deve avere un Network ID da 32 bit che
 
 
 // Only for tests, this should be readen from the EEPROM
-uint16_t networkId = 18287;
-uint32_t networkKey = 48384;
+uint16_t networkId = 10101;
+uint32_t networkKey = 80808;
 
 
 /* Child table - a table used in the network setup phase, when it's completed it can be deleted.

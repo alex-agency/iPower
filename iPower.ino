@@ -34,9 +34,9 @@ FILE serial_out = {0};
 #endif
 
 // DEVICE TYPE
-const uint32_t deviceType = 123;
+const uint32_t deviceType = 001;
 // DEVICE UNIQUE ID
-uint32_t deviceUniqueId = 394932;
+uint32_t deviceUniqueId = 100001;
 /** LAYER 2 DEPENDENT CODE **/
 // Declare SPI bus pins
 #define CE_PIN  9
@@ -182,6 +182,13 @@ void loop()
       Serial.flush();
       LowPower.powerDown(SLEEP_8S, 8, ADC_OFF, BOD_OFF); 
   	}
+
+    // send data to base
+    sendCommand(COMPUTER_TEMP, (void*) &states[COMPUTER_TEMP], sizeof(states[COMPUTER_TEMP]));
+    sendCommand(HUMIDITY, (void*) &states[HUMIDITY], sizeof(states[HUMIDITY]));
+    sendCommand(POWER, (void*) &states[POWER], sizeof(states[POWER]));
+    sendCommand(RELAY_1, (void*) &states[RELAY_1], sizeof(states[RELAY_1]));
+    sendCommand(RELAY_2, (void*) &states[RELAY_2], sizeof(states[RELAY_2]));
   }
   // update network
   rf24receive();
