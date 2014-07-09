@@ -63,7 +63,7 @@ void onCommandReceived(uint8_t command, void* data, uint8_t dataLen)
   #endif
 }
 
-#define name  "iPower"
+#define NAME  "iPower"
 
 // Declare DHT11 sensor digital pin
 #define DHT11PIN  3
@@ -186,7 +186,7 @@ void loop()
   	}
 
     // send data to base
-    sendCommand(1, (void*) &name, sizeof(name));
+    sendCommand(1, (void*) &NAME, sizeof(NAME));
     sendCommand(2, (void*) &states[COMPUTER_TEMP], sizeof(states[COMPUTER_TEMP]));
     sendCommand(3, (void*) &states[HUMIDITY], sizeof(states[HUMIDITY]));
     sendCommand(4, (void*) &states[POWER], sizeof(states[POWER]));
