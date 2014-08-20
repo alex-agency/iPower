@@ -124,6 +124,8 @@ void setup()
   delay(500);
   // restart if memory lower 512 bytes
   softResetMem(512);
+  // restart after freezing for 8 sec
+  softResetTimeout();
 
   // initialize radio
   rf24init();
@@ -139,11 +141,8 @@ void setup()
 
   // always Power On after reset 
   // its temproary for hydroponics
-  delay(5000);
+  delay(1000);
   buttonLongPress();
-  
-  // restart after freezing for 8 sec
-  softResetTimeout();
 }
 
 //
