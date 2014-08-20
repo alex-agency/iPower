@@ -124,8 +124,6 @@ void setup()
   delay(500);
   // restart if memory lower 512 bytes
   softResetMem(512);
-  // restart after freezing for 8 sec
-  softResetTimeout();
 
   // initialize radio
   rf24init();
@@ -138,6 +136,14 @@ void setup()
   pinMode(ACS712PIN, INPUT);
   //Quiscent output voltage - the average voltage ACS712 shows with no load (0 A)
   ACS712.determineVQ(ACS712PIN);
+
+  // always Power On after reset 
+  // its temproary for hydroponics
+  delay(5000);
+  buttonLongPress();
+  
+  // restart after freezing for 8 sec
+  softResetTimeout();
 }
 
 //
@@ -186,12 +192,13 @@ void loop()
   	}
 
     // send data to base
-    sendCommand(1, (void*) &NAME, sizeof(NAME));
-    sendCommand(2, (void*) &states[COMPUTER_TEMP], sizeof(states[COMPUTER_TEMP]));
-    sendCommand(3, (void*) &states[HUMIDITY], sizeof(states[HUMIDITY]));
-    sendCommand(4, (void*) &states[POWER], sizeof(states[POWER]));
-    sendCommand(5, (void*) &states[RELAY_1], sizeof(states[RELAY_1]));
-    sendCommand(6, (void*) &states[RELAY_2], sizeof(states[RELAY_2]));
+    sendCommand( 1, (void*) &states, sizeof(states) );
+    //sendCommand(1, (void*) &NAME, sizeof(NAME));
+    //sendCommand(2, (void*) &states[COMPUTER_TEMP], sizeof(states[COMPUTER_TEMP]));
+    //sendCommand(3, (void*) &states[HUMIDITY], sizeof(states[HUMIDITY]));
+    //sendCommand(4, (void*) &states[POWER], sizeof(states[POWER]));
+    //sendCommand(5, (void*) &states[RELAY_1], sizeof(states[RELAY_1]));
+    //sendCommand(6, (void*) &states[RELAY_2], sizeof(states[RELAY_2]));
   }
   // update network
   rf24receive();
