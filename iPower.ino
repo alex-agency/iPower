@@ -224,10 +224,10 @@ void loop()
 /****************************************************************************/
 
 void relayOn(const char* relay) {
-  if(states[relay]) {
+  //if(states[relay]) {
     // relay is already on
-    return;
-  }
+  //  return;
+  //}
   bool status = relays(relay, 0); // 0 is ON
   if(status) {
     #ifdef DEBUG
